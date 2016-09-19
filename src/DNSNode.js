@@ -264,6 +264,4 @@ function DNSNode (host, _settings) {
 
 util.inherits(DNSNode, EventEmitter)
 
-DNSNode.defaultSettings = defaultSettings
-
 export default DNSNode

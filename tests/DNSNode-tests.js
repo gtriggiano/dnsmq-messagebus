@@ -62,10 +62,10 @@ describe('DNSNode(host [, settings])', () => {
     }
     should(trowingCall).throw()
   })
-  it('should console.warn() if settings.electionTimeout is set to less than 1500 msec', () => {
+  it('should console.warn() if settings.electionTimeout is set to less than 400 msec', () => {
     let stub = sinon.stub(console, 'warn')
     ;(function () {
-      return new DNSNode(DNSHOST, {electionTimeout: 1499})
+      return new DNSNode(DNSHOST, {electionTimeout: 399})
     })()
     sinon.assert.calledOnce(stub)
     stub.restore()
