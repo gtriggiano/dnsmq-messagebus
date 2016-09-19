@@ -1,0 +1,46 @@
+version: '2'
+services:
+
+  development:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "test:library:live"]
+    volumes:
+      - "./src:/app/src"
+      - "./tests:/app/tests"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
+
+  testlibrary:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "test:library"]
+    volumes:
+      - "./src:/app/src"
+      - "./tests:/app/tests"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
+
+  testexternalnode:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "test:external:node"]
+    volumes:
+      - "./src:/app/src"
+      - "./tests:/app/tests"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
+
+  cluster:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "cluster"]
+    volumes:
+      - "./src:/app/src"
+      - "./tests:/app/tests"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
