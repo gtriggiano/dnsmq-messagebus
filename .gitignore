@@ -1,0 +1,8 @@
+.DS_Store
+
+# Distribution folder
+lib/
+
+# NPM
+node_modules
+npm-debug.log
