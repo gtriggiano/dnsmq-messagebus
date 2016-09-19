@@ -9,7 +9,8 @@
     "clean": "npm run stop && npm run rm",
     "rm": "docker-compose rm -f",
     "test": "npm run clean && docker-compose up testlibrary && npm run clean && docker-compose scale cluster=3 && sleep 10 && docker-compose up testexternalnode",
-    "cluster": "babel-node tests/startClusterNode.js",
+    "cluster": "npm run clean && docker-compose scale cluster=3 && docker-compose logs -f cluster",
+    "start:cluster:node": "babel-node tests/startClusterNode.js",
     "test:library": "DNSHOST=testlibrary mocha --compilers js:babel-register tests/index.js",
     "test:library:live": "DNSHOST=development mocha --compilers js:babel-register -b -w tests/index.js",
     "test:external:node": "mocha --compilers js:babel-register tests/externalNodeConnection.js"

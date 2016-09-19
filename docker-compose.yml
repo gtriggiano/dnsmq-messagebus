@@ -38,7 +38,7 @@ services:
     build:
       context: .
       dockerfile: tests/Dockerfile.dev
-    command: ["npm", "run", "cluster"]
+    command: ["npm", "run", "start:cluster:node"]
     volumes:
       - "./src:/app/src"
       - "./tests:/app/tests"
