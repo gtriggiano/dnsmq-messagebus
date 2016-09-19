@@ -16,4 +16,7 @@ describe('DNS-MessageBus', () => {
     let externalNode = ExternalNode(DNSHOST)
     should(externalNode).be.an.instanceof(ExternalNode)
   })
+
+  require('./DNSNode-tests')
+  require('./ExternalNode-tests')
 })
