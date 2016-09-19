@@ -188,7 +188,7 @@ function DNSNode (host, _settings) {
     function onMasterEelected (newMaster) {
       if (newMaster.id !== _nodeId) {
         _id = _nodeId
-        _electionCoordinator.removeListener(onMasterEelected)
+        _electionCoordinator.removeListener('newMaster', onMasterEelected)
         _nodesUpdater.publish('heartbeats', JSON.stringify(newMaster))
         setTimeout(_teardown, 10)
       } else {
