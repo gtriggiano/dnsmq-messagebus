@@ -13,7 +13,9 @@
     "start:cluster:node": "babel-node tests/startClusterNode.js",
     "test:library": "DNSHOST=testlibrary mocha --compilers js:babel-register tests/index.js",
     "test:library:live": "DNSHOST=development mocha --compilers js:babel-register -b -w tests/index.js",
-    "test:external:node": "mocha --compilers js:babel-register tests/externalNodeConnection.js"
+    "test:external:node": "mocha --compilers js:babel-register tests/externalNodeConnection.js",
+    "prepublish": "docker-compose build distribution && docker-compose up distribution",
+    "build": "rm -rf lib/* && babel src -d lib"
   },
   "keywords": [
     "zmq",

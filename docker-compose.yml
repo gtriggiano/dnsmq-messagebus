@@ -44,3 +44,14 @@ services:
       - "./tests:/app/tests"
       - "./package.json:/app/package.json"
       - "./.babelrc:/app/.babelrc"
+
+  distribution:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "build"]
+    volumes:
+      - "./src:/app/src"
+      - "./lib:/app/lib"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
