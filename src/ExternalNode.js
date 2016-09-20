@@ -40,7 +40,7 @@ function ExternalNode (host, _settings) {
   EventEmitter.call(this)
 
   // Private API
-  let _id = uuid.v4()
+  let _id = `EX-${uuid.v4()}`
   let _name = nodeIdToName(_id)
   let _connected = false
   let _seeking = false
