@@ -12,6 +12,17 @@ services:
       - "./package.json:/app/package.json"
       - "./.babelrc:/app/.babelrc"
 
+  development-externalnode:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.dev
+    command: ["npm", "run", "test:external:node:live"]
+    volumes:
+      - "./src:/app/src"
+      - "./tests:/app/tests"
+      - "./package.json:/app/package.json"
+      - "./.babelrc:/app/.babelrc"
+
   testlibrary:
     build:
       context: .

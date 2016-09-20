@@ -1,5 +1,4 @@
 import should from 'should/as-function'
-import sinon from 'sinon'
 
 import { ExternalNode } from '../src'
 

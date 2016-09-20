@@ -21,6 +21,7 @@ echo -n 'Testing library... '
 docker-compose up testlibrary &>/dev/null
 echo 'Done'
 echo
+echo 'Tests logs:'
 docker logs "${DOCPROJECT}_testlibrary_1"
 echo
 echo '==================================================='
@@ -35,8 +36,8 @@ echo -n 'Starting a cluster of 3 DNSNode(s)... '
 docker-compose scale cluster=3 &>/dev/null
 echo 'Done'
 echo
-echo -n 'Waiting 2 seconds for cluster internal setup... '
-sleep 2
+echo -n 'Waiting 5 seconds for cluster internal setup... '
+sleep 5
 echo 'OK'
 echo
 echo '==================================================='

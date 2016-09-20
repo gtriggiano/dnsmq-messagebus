@@ -7,12 +7,14 @@ import EventEmitter from 'eventemitter3'
 
 import { EXTERNAL_NODE } from './NodeTypes'
 
-import { nodeIdToName, prefixString, debugLog, zeropad } from './utils'
+import { nodeIdToName, prefixString, debugLog } from './utils'
 
 const HEARTBEAT_INTERVAL_CHECK = 400
 const HEARTBEAT_TIMEOUT = 1500
 const ctorMessage = prefixString('[ExternalNode constructor]: ')
 const invariantMessage = prefixString('[ExternalNode Invariant]: ')
+
+let internalEventsChannels = ['connect', 'disconnect', 'connection:failure', 'heartbeats']
 
 let defaultSettings = {
   debug: false,
@@ -54,6 +56,10 @@ function ExternalNode (host, _settings) {
     let passedTime = Date.now() - _lastHeartbeatReceivedTime
     if (passedTime > HEARTBEAT_TIMEOUT) {
       node.debug('Missing master...')
+      if (_connected) {
+        _connected = false
+        node.emit('disconnect')
+      }
       _seekForMaster()
     }
   }
@@ -63,15 +69,25 @@ function ExternalNode (host, _settings) {
     dns.resolve4(host, (err, addresses) => {
       if (err) return
       let _updating = zmq.socket('sub')
-      _updating.subscribe('heartbeats')
-      _updating.on('message', (channelBuffer, ...argsBuffers) => {
+      let _exit = false
+      let _onHeartbeatReceived = (channelBuffer, ...argsBuffers) => {
         _seeking = false
         let args = argsBuffers.map(buffer => buffer.toString())
         let master = JSON.parse(args[0])
         _connectedMaster = master
         _connectToMaster()
         _updating.close()
-      })
+        _exit = true
+      }
+      _updating.subscribe('heartbeats')
+      _updating.once('message', _onHeartbeatReceived)
+      setTimeout(function () {
+        if (_exit) return
+        _seeking = false
+        _updating.removeListener('message', _onHeartbeatReceived)
+        _updating.close()
+        node.emit('connection:failure')
+      }, HEARTBEAT_TIMEOUT)
 
       addresses.forEach(address => {
         _updating.connect(`tcp://${address}:${settings.externalUpdatesPort}`)
@@ -135,6 +151,7 @@ function ExternalNode (host, _settings) {
   // Public API
   function connect () {
     node.debug('Connecting...')
+    _checkHeartbeat()
     _checkHearbeatInterval = setInterval(_checkHeartbeat, HEARTBEAT_INTERVAL_CHECK)
   }
   function disconnect () {
@@ -148,7 +165,7 @@ function ExternalNode (host, _settings) {
     node.emit('disconnect')
   }
   function publish (channel, ...args) {
-    if (channel === 'heartbeats') return
+    if (~internalEventsChannels.indexOf(channel)) return
     if (_intPub) {
       _intPub.send([channel, ...args])
     }
@@ -158,6 +175,7 @@ function ExternalNode (host, _settings) {
     if (!every(channels, isString)) throw new TypeError(invariantMessage('subscribe channels must be represented by strings'))
 
     channels.forEach(channel => {
+      if (~internalEventsChannels.indexOf(channel)) return
       if (_intSub) _intSub.subscribe(channel)
       if (!~_subscribedChannels.indexOf(channel)) {
         _subscribedChannels.push(channel)
@@ -169,6 +187,7 @@ function ExternalNode (host, _settings) {
     if (!every(channels, isString)) throw new TypeError(invariantMessage('subscribe channels must be represented by strings'))
 
     channels.forEach(channel => {
+      if (~internalEventsChannels.indexOf(channel)) return
       if (_intSub) _intSub.unsubscribe(channel)
       let index = _subscribedChannels.indexOf(channel)
       if (index >= 0) {
