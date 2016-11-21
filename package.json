@@ -1,6 +1,6 @@
 {
   "name": "dnsmq-messagebus",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A message bus implementation for nodes reachable through DNS resolution. Based on ØMQ",
   "main": "lib/index.js",
   "scripts": {
