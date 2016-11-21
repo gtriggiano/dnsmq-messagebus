@@ -1,9 +1,0 @@
-FROM mhart/alpine-node:4.5.0
-
-RUN apk add --no-cache make gcc g++ python
-RUN apk add --no-cache zeromq zeromq-dev
-
-WORKDIR /app
-
-ADD package.json /app/package.json
-RUN npm install

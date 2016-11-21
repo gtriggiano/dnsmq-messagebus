@@ -1,5 +1,5 @@
 import util from 'util'
-import zmq from 'zmq'
+import zmq from 'zeromq'
 import dns from 'dns'
 import EventEmitter from 'eventemitter3'
 

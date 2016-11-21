@@ -1,7 +1,7 @@
 import util from 'util'
 import dns from 'dns'
 import uuid from 'uuid'
-import zmq from 'zmq'
+import zmq from 'zeromq'
 import { isString, isInteger, isArray, every } from 'lodash'
 import EventEmitter from 'eventemitter3'
 

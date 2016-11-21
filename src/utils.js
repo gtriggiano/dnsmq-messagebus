@@ -1,5 +1,5 @@
 import os from 'os'
-import { ZMQ_LAST_ENDPOINT } from 'zmq'
+import { ZMQ_LAST_ENDPOINT } from 'zeromq'
 import { curry, noop } from 'lodash'
 
 const prefixString = curry(function prefixString (prefix, str) {

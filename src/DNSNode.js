@@ -1,5 +1,5 @@
 import util from 'util'
-import zmq from 'zmq'
+import zmq from 'zeromq'
 import uuid from 'uuid'
 import { isString, isInteger, isArray, every } from 'lodash'
 import EventEmitter from 'eventemitter3'
