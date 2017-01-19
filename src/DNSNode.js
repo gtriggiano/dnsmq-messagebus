@@ -1,3 +1,4 @@
+import D from 'debug'
 import util from 'util'
 import zmq from 'zeromq'
 import uuid from 'uuid'
@@ -9,7 +10,7 @@ import MasterMessagesBroker from './MasterMessagesBroker'
 import ExternalNodesUpdater from './ExternalNodesUpdater'
 import { DNS_NODE } from './NodeTypes'
 
-import { nodeIdToName, prefixString, debugLog, zeropad } from './utils'
+import { nodeIdToName, prefixString, zeropad } from './utils'
 
 const HEARTBEAT_INTERVAL_CHECK = 400
 const HEARTBEAT_TIMEOUT = 1500
@@ -17,7 +18,6 @@ const ctorMessage = prefixString('[DNSNode constructor]: ')
 const invariantMessage = prefixString('[DNSNode Invariant]: ')
 
 let defaultSettings = {
-  debug: false,
   electionTimeout: 400,
   electionPriority: 0,
   coordinationPort: 50061,
@@ -45,7 +45,6 @@ function DNSNode (host, _settings) {
   // Settings
   let settings = Object.assign({}, defaultSettings, _settings)
   let {
-    debug,
     electionTimeout,
     electionPriority,
     coordinationPort,
@@ -230,7 +229,8 @@ function DNSNode (host, _settings) {
   }
 
   //  Debug
-  node.debug = debugLog(`[MessageBus DNS Node ${_name}]: `, debug)
+  const debug = D('dnsmq-messagebus:dnsnode')
+  node.debug = (...args) => debug(_name, ...args)
 
   // Instance decoration
   Object.defineProperty(node, 'id', {

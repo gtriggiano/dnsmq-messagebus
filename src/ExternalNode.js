@@ -1,3 +1,4 @@
+import D from 'debug'
 import util from 'util'
 import dns from 'dns'
 import uuid from 'uuid'
@@ -7,7 +8,7 @@ import EventEmitter from 'eventemitter3'
 
 import { EXTERNAL_NODE } from './NodeTypes'
 
-import { nodeIdToName, prefixString, debugLog } from './utils'
+import { nodeIdToName, prefixString } from './utils'
 
 const HEARTBEAT_INTERVAL_CHECK = 400
 const HEARTBEAT_TIMEOUT = 1500
@@ -17,7 +18,6 @@ const invariantMessage = prefixString('[ExternalNode Invariant]: ')
 let internalEventsChannels = ['connect', 'disconnect', 'connection:failure', 'heartbeats']
 
 let defaultSettings = {
-  debug: false,
   externalUpdatesPort: 50081
 }
 
@@ -29,10 +29,7 @@ function ExternalNode (host, _settings) {
 
   // Settings
   let settings = Object.assign({}, defaultSettings, _settings)
-  let {
-    debug,
-    externalUpdatesPort
-  } = settings
+  let { externalUpdatesPort } = settings
 
   // Settings validation
   if (!host || !isString(host)) throw new TypeError(ctorMessage('host is mandatory and should be a string.'))
@@ -197,7 +194,8 @@ function ExternalNode (host, _settings) {
   }
 
   //  Debug
-  node.debug = debugLog(`[External Node ${_name}]: `, debug)
+  const debug = D('dnsmq-messagebus:externalnode')
+  node.debug = (...args) => debug(_name, ...args)
 
   // Instance decoration
   Object.defineProperty(node, 'id', {

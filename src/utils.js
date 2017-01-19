@@ -1,17 +1,12 @@
 import os from 'os'
 import { ZMQ_LAST_ENDPOINT } from 'zeromq'
-import { curry, noop } from 'lodash'
+import { curry } from 'lodash'
 
 const prefixString = curry(function prefixString (prefix, str) {
   return `${prefix}${str}`
 })
 
 function nodeIdToName (id) { return id.substring(3, 11) }
-
-function debugLog (prefix, enabled) {
-  if (!enabled) return noop
-  return (...args) => console.log(prefix, new Date().toISOString(), ...args)
-}
 
 function boxExternalIps () {
   let ifaces = os.networkInterfaces()
@@ -37,7 +32,6 @@ function zeropad (num, len) {
 export {
   nodeIdToName,
   prefixString,
-  debugLog,
   getSocketEndpoint,
   zeropad
 }
