@@ -11,7 +11,7 @@
     "rm": "docker-compose rm -f",
     "test": "./scripts/test.sh",
     "cluster": "npm run clean && docker-compose scale cluster=3 && docker-compose logs -f cluster",
-    "start:cluster:node": "babel-node tests/startClusterNode.js",
+    "start:cluster:node": "DEBUG=dnsmq-messagebus:* babel-node tests/startClusterNode.js",
     "test:library": "DNSHOST=testlibrary mocha --compilers js:babel-register tests/index.js",
     "test:library:live": "DNSHOST=development mocha --compilers js:babel-register -b -w tests/index.js",
     "test:external:node": "mocha --compilers js:babel-register tests/ExternalNode-connection-tests.js",
@@ -26,6 +26,7 @@
     "dns"
   ],
   "dependencies": {
+    "debug": "^2.6.0",
     "eventemitter3": "2.0.0",
     "lodash": "4.15.0",
     "uuid": "2.0.2",
