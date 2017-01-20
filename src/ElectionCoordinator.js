@@ -7,7 +7,7 @@ function ElectionCoordinator (_settings) {
     host,
     coordinationPort,
     electionTimeout,
-    nodeId,
+    node,
     masterBroker,
     debug
   } = _settings
@@ -51,9 +51,9 @@ function ElectionCoordinator (_settings) {
         _voting = true
         debug(`Master election: candidating...`)
         _broadcastMessage('electionMasterCandidate', {
-          id: nodeId,
+          id: node.id,
           endpoints: masterBroker.endpoints,
-          isMaster: _master && _master.id === nodeId
+          isMaster: _master && _master.id === node.id
         })
         break
       case 'electionMasterCandidate':

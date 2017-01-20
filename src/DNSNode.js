@@ -52,7 +52,7 @@ function DNSNode (host, _settings) {
     host,
     coordinationPort,
     electionTimeout,
-    nodeId: _id,
+    node,
     masterBroker: _masterBroker,
     debug: node.debug
   })
