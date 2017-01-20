@@ -70,9 +70,7 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
               _masterCandidate = message.data
             }
           } else {
-            if (_masterCandidate.isMaster) {
-              _masterCandidate = _masterCandidate
-            } else {
+            if (!_masterCandidate.isMaster) {
               _masterCandidate = _masterCandidate.id < message.data.id
                                   ? _masterCandidate
                                   : message.data
