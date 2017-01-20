@@ -1,16 +1,18 @@
-import util from 'util'
 import zmq from 'zeromq'
 import dns from 'dns'
 import EventEmitter from 'eventemitter3'
 
-function ElectionCoordinator (host, node, masterBroker, settings) {
-  let instance = this instanceof ElectionCoordinator
-  if (!instance) return new ElectionCoordinator(host, node, masterBroker, settings)
+function ElectionCoordinator (_settings) {
+  let {
+    host,
+    coordinationPort,
+    electionTimeout,
+    nodeId,
+    masterBroker,
+    debug
+  } = _settings
 
-  let coordinator = this
-
-  // Emitter inheritance
-  EventEmitter.call(this)
+  let coordinator = new EventEmitter()
 
   // Private API
   let _voting = false
@@ -27,7 +29,7 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
       if (err) return
       addresses.forEach(address => {
         let messenger = zmq.socket('req')
-        messenger.connect(`tcp://${address}:${settings.coordinationPort}`)
+        messenger.connect(`tcp://${address}:${coordinationPort}`)
         messenger.send(message)
 
         let _end = false
@@ -47,16 +49,16 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
     switch (message.type) {
       case 'electionStart':
         _voting = true
-        node.debug(`Master election: candidating...`)
+        debug(`Master election: candidating...`)
         _broadcastMessage('electionMasterCandidate', {
-          id: node.id,
+          id: nodeId,
           endpoints: masterBroker.endpoints,
-          isMaster: _master && _master.id === node.id
+          isMaster: _master && _master.id === nodeId
         })
         break
       case 'electionMasterCandidate':
         if (_electionCaller) {
-          node.debug(`Master election: candidate ${message.data.id}.${message.data.isMaster ? ' Is master.' : ''}`)
+          debug(`Master election: candidate ${message.data.id}.${message.data.isMaster ? ' Is master.' : ''}`)
           if (!_masterCandidate) {
             _masterCandidate = message.data
             return
@@ -84,7 +86,7 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
           _master = message.data.newMaster
           coordinator.emit('newMaster', _master)
         } else {
-          node.debug(`Master election: confirmed master ${_master.id}`)
+          debug(`Master election: confirmed master ${_master.id}`)
         }
     }
     _intCmd.send([messenger, _, ''])
@@ -92,14 +94,14 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
 
   // Public API
   function bind () {
-    _intCmd.bindSync(`tcp://0.0.0.0:${settings.coordinationPort}`)
+    _intCmd.bindSync(`tcp://0.0.0.0:${coordinationPort}`)
   }
   function unbind () {
-    _intCmd.unbindSync(`tcp://0.0.0.0:${settings.coordinationPort}`)
+    _intCmd.unbindSync(`tcp://0.0.0.0:${coordinationPort}`)
   }
   function startElection () {
     if (_voting) return
-    node.debug('Calling master election')
+    debug('Calling master election')
     _voting = true
     _electionCaller = true
     _broadcastMessage('electionStart')
@@ -108,27 +110,22 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
         id: _masterCandidate.id,
         endpoints: _masterCandidate.endpoints
       }
-      node.debug('Master election: time finished')
-      node.debug(`Master election: winner is ${newMaster.id}`)
-      node.debug(`${JSON.stringify(newMaster, null, 2)}`)
+      debug('Master election: time finished')
+      debug(`Master election: winner is ${JSON.stringify(newMaster, null, 2)}`)
       _broadcastMessage('electionWinner', {newMaster})
       _electionCaller = false
       _masterCandidate = false
-    }, settings.electionTimeout)
+    }, electionTimeout)
   }
 
-  Object.defineProperty(coordinator, 'voting', {
-    get: () => _voting,
-    set: () => {}
-  })
-
-  Object.assign(coordinator, {
-    bind,
-    unbind,
-    startElection
+  return Object.defineProperties(coordinator, {
+    voting: {
+      get: () => _voting
+    },
+    bind: {value: bind},
+    unbind: {value: unbind},
+    startElection: {value: startElection}
   })
 }
-
-util.inherits(ElectionCoordinator, EventEmitter)
 
 export default ElectionCoordinator

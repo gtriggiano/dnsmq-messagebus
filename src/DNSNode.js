@@ -1,5 +1,4 @@
 import D from 'debug'
-import util from 'util'
 import zmq from 'zeromq'
 import uuid from 'uuid'
 import { isString, isInteger, isArray, every } from 'lodash'
@@ -12,24 +11,16 @@ import { DNS_NODE } from './NodeTypes'
 
 import { nodeIdToName, prefixString, zeropad } from './utils'
 
-const HEARTBEAT_INTERVAL_CHECK = 400
-const HEARTBEAT_TIMEOUT = 1500
+const HEARTBEAT_INTERVAL_CHECK = 500
+const HEARTBEAT_TIMEOUT = 1000
 const ctorMessage = prefixString('[DNSNode constructor]: ')
 const invariantMessage = prefixString('[DNSNode Invariant]: ')
-
-let defaultSettings = {
-  electionTimeout: 400,
-  electionPriority: 0,
-  coordinationPort: 50061,
-  externalUpdatesPort: 50081
-}
 
 /**
  * DNS Node
  * @constructor
  * @param {Object} settings A map of settings
- *                          	host
- *                           	debug
+ *                            host
  *                            discoveryInterval
  *                            internalPublishPort
  *                            internalCommandPort
@@ -37,40 +28,34 @@ let defaultSettings = {
  *                            externalSubscribePort
  */
 function DNSNode (host, _settings) {
-  let instance = this instanceof DNSNode
-  if (!instance) return new DNSNode(host, _settings)
+  let settings = {...defaultSettings, ..._settings, host}
+  _validateSettings(settings)
 
-  let node = this
+  let node = new EventEmitter()
 
-  // Settings
-  let settings = Object.assign({}, defaultSettings, _settings)
+  //  Debug
+  const debug = D('dnsmq-messagebus:dnsnode')
+  node.debug = (...args) => debug(_name, ...args)
+
   let {
     electionTimeout,
     electionPriority,
-    coordinationPort,
-    externalUpdatesPort
+    coordinationPort
   } = settings
-
-  // Settings validation
-  if (!host || !isString(host)) throw new TypeError(ctorMessage('host is mandatory and should be a string.'))
-  if (!isInteger(coordinationPort) || coordinationPort <= 0) throw new TypeError(ctorMessage('settings.coordinationPort should be a positive integer.'))
-  if (!isInteger(electionTimeout) || electionTimeout <= 0) throw new TypeError(ctorMessage('settings.electionTimeout should be a positive integer.'))
-  if (!isInteger(electionPriority) || electionPriority < 0 || electionPriority > 99) throw new TypeError(ctorMessage('settings.electionPriority should be an integer between 0 and 99.'))
-  if (!isInteger(externalUpdatesPort) || externalUpdatesPort <= 0) throw new TypeError(ctorMessage('settings.externalUpdatesPort should be a positive integer.'))
-  if (coordinationPort === externalUpdatesPort) throw new TypeError(ctorMessage('settings.coordinationPort and settings.externalUpdatesPort should be different.'))
-
-  // Warnings
-  if (electionTimeout < 400) console.warn(ctorMessage('setting electionTimeout to a low value requires a performant network to avoid members votes loss'))
-
-  // Emitter inheritance
-  EventEmitter.call(this)
 
   // Private API
   let _id = `${zeropad(99 - electionPriority, 2)}-${uuid.v4()}`
   let _name = nodeIdToName(_id)
   let _masterBroker = MasterMessagesBroker(_id)
   let _nodesUpdater = ExternalNodesUpdater(settings)
-  let _electionCoordinator = new ElectionCoordinator(host, node, _masterBroker, settings)
+  let _electionCoordinator = new ElectionCoordinator({
+    host,
+    coordinationPort,
+    electionTimeout,
+    nodeId: _id,
+    masterBroker: _masterBroker,
+    debug: node.debug
+  })
   _electionCoordinator.on('newMaster', (newMaster) => {
     _lastHeartbeatReceivedTime = Date.now()
     if (
@@ -228,40 +213,60 @@ function DNSNode (host, _settings) {
     })
   }
 
-  //  Debug
-  const debug = D('dnsmq-messagebus:dnsnode')
-  node.debug = (...args) => debug(_name, ...args)
-
-  // Instance decoration
-  Object.defineProperty(node, 'id', {
-    get: () => _id,
-    set: () => console.warn(invariantMessage('You cannot change the .id of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'name', {
-    get: () => _name,
-    set: () => console.warn(invariantMessage('You cannot change the .name of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'type', {
-    get: () => DNS_NODE,
-    set: () => console.warn(invariantMessage('You cannot change the .type of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'connected', {
-    get: () => _connected,
-    set: () => console.warn(invariantMessage('You cannot manually change the .connected status of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'master', {
-    get: () => _connectedMaster,
-    set: () => console.warn(invariantMessage('You cannot manually change the .master reference of a dnsNode instance'))
-  })
-  Object.assign(node, {
-    connect,
-    disconnect,
-    publish,
-    subscribe,
-    ubsubscribe
+  return Object.defineProperties(node, {
+    id: {
+      get: () => _id,
+      set: () => console.warn(invariantMessage('You cannot change the .id of a dnsNode instance'))
+    },
+    name: {
+      get: () => _name,
+      set: () => console.warn(invariantMessage('You cannot change the .name of a dnsNode instance'))
+    },
+    type: {
+      get: () => DNS_NODE,
+      set: () => console.warn(invariantMessage('You cannot change the .type of a dnsNode instance'))
+    },
+    connected: {
+      get: () => _connected,
+      set: () => console.warn(invariantMessage('You cannot manually change the .connected status of a dnsNode instance'))
+    },
+    master: {
+      get: () => _connectedMaster,
+      set: () => console.warn(invariantMessage('You cannot manually change the .master reference of a dnsNode instance'))
+    },
+    connect: {value: connect},
+    disconnect: {value: disconnect},
+    publish: {value: publish},
+    subscribe: {value: subscribe},
+    ubsubscribe: {value: ubsubscribe}
   })
 }
 
-util.inherits(DNSNode, EventEmitter)
+let defaultSettings = {
+  electionTimeout: 400,
+  electionPriority: 0,
+  coordinationPort: 50061,
+  externalUpdatesPort: 50081
+}
+
+function _validateSettings (settings) {
+  let {
+    host,
+    electionTimeout,
+    electionPriority,
+    coordinationPort,
+    externalUpdatesPort
+  } = settings
+
+  if (!host || !isString(host)) throw new TypeError(ctorMessage('host is mandatory and should be a string.'))
+  if (!isInteger(coordinationPort) || coordinationPort <= 0) throw new TypeError(ctorMessage('settings.coordinationPort should be a positive integer.'))
+  if (!isInteger(electionTimeout) || electionTimeout <= 0) throw new TypeError(ctorMessage('settings.electionTimeout should be a positive integer.'))
+  if (!isInteger(electionPriority) || electionPriority < 0 || electionPriority > 99) throw new TypeError(ctorMessage('settings.electionPriority should be an integer between 0 and 99.'))
+  if (!isInteger(externalUpdatesPort) || externalUpdatesPort <= 0) throw new TypeError(ctorMessage('settings.externalUpdatesPort should be a positive integer.'))
+  if (coordinationPort === externalUpdatesPort) throw new TypeError(ctorMessage('settings.coordinationPort and settings.externalUpdatesPort should be different.'))
+
+  // Warnings
+  if (electionTimeout < 400) console.warn(ctorMessage('setting electionTimeout to a low value requires a performant network to avoid members votes loss'))
+}
 
 export default DNSNode
