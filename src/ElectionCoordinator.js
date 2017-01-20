@@ -15,9 +15,8 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
   // Private API
   let _voting = false
   let _electionCaller = false
-  let _master = {}
-  let _masterCandidate = {}
-  let _lastCandidateIsMaster = false
+  let _master = false
+  let _masterCandidate = false
   let _intCmd = zmq.socket('router')
   _intCmd.on('message', _onCoordinationMessage)
 
@@ -48,23 +47,47 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
     switch (message.type) {
       case 'electionStart':
         _voting = true
-        node.debug(`Master election: voting...`)
+        node.debug(`Master election: candidating...`)
         _broadcastMessage('electionMasterCandidate', {
-          lastMaster: _master,
-          masterCandidate: {id: node.id, endpoints: masterBroker.endpoints}
+          id: node.id,
+          endpoints: masterBroker.endpoints,
+          isMaster: _master && _master.id === node.id
         })
         break
       case 'electionMasterCandidate':
         if (_electionCaller) {
-          if (message.data.masterCandidate.id < _masterCandidate.id) _masterCandidate = message.data.masterCandidate
-          if (!_master.id) _master = message.data.lastMaster
-          if (_masterCandidate.id === _master.id) _lastCandidateIsMaster = true
+          node.debug(`Master election: candidate ${message.data.id}.${message.data.isMaster ? ' Is master.' : ''}`)
+          if (!_masterCandidate) {
+            _masterCandidate = message.data
+            return
+          }
+          if (message.data.isMaster) {
+            if (_masterCandidate.isMaster) {
+              _masterCandidate = _masterCandidate.id < message.data.id
+                                  ? _masterCandidate
+                                  : message.data
+            } else {
+              _masterCandidate = message.data
+            }
+          } else {
+            if (_masterCandidate.isMaster) {
+              _masterCandidate = _masterCandidate
+            } else {
+              _masterCandidate = _masterCandidate.id < message.data.id
+                                  ? _masterCandidate
+                                  : message.data
+            }
+          }
         }
         break
       case 'electionWinner':
-        _master = message.data.newMaster
         _voting = false
-        coordinator.emit('newMaster', _master)
+        if (!_master || _master.id !== message.data.newMaster.id) {
+          _master = message.data.newMaster
+          coordinator.emit('newMaster', _master)
+        } else {
+          node.debug(`Master election: confirmed master ${_master.id}`)
+        }
     }
     _intCmd.send([messenger, _, ''])
   }
@@ -81,23 +104,18 @@ function ElectionCoordinator (host, node, masterBroker, settings) {
     node.debug('Calling master election')
     _voting = true
     _electionCaller = true
-    _masterCandidate = {id: node.id, endpoints: masterBroker.endpoints}
-    _lastCandidateIsMaster = false
     _broadcastMessage('electionStart')
     setTimeout(function () {
-      node.debug('Master election time finished')
-      if (_master.id !== _masterCandidate.id && !_lastCandidateIsMaster) {
-        _master = _masterCandidate
-        _broadcastMessage('electionWinner', {
-          newMaster: _masterCandidate
-        })
-      } else {
-        _broadcastMessage('electionWinner', {
-          newMaster: _master
-        })
+      let newMaster = {
+        id: _masterCandidate.id,
+        endpoints: _masterCandidate.endpoints
       }
-      node.debug(`Master election: winner ${_master.id}`)
+      node.debug('Master election: time finished')
+      node.debug(`Master election: winner is ${newMaster.id}`)
+      node.debug(`${JSON.stringify(newMaster, null, 2)}`)
+      _broadcastMessage('electionWinner', {newMaster})
       _electionCaller = false
+      _masterCandidate = false
     }, settings.electionTimeout)
   }
 
