@@ -2,6 +2,8 @@ import zmq from 'zeromq'
 import dns from 'dns'
 import EventEmitter from 'eventemitter3'
 
+import { nodeIdToName } from './utils'
+
 function ElectionCoordinator (_settings) {
   let {
     host,
@@ -24,13 +26,16 @@ function ElectionCoordinator (_settings) {
 
   function _broadcastMessage (type, data) {
     data = data || {}
-    let message = JSON.stringify({type, data})
+    let message = {type, data}
     dns.resolve4(host, (err, addresses) => {
       if (err) return
       addresses.forEach(address => {
         let messenger = zmq.socket('req')
         messenger.connect(`tcp://${address}:${coordinationPort}`)
-        messenger.send(message)
+        messenger.send(JSON.stringify({
+          ...message,
+          toAddress: address
+        }))
 
         let _end = false
         function closeSocket () {
@@ -46,6 +51,9 @@ function ElectionCoordinator (_settings) {
   }
   function _onCoordinationMessage (messenger, _, msgBuffer) {
     let message = JSON.parse(msgBuffer)
+
+    masterBroker.setIP(message.toAddress)
+
     switch (message.type) {
       case 'electionStart':
         _voting = true
@@ -58,7 +66,7 @@ function ElectionCoordinator (_settings) {
         break
       case 'electionMasterCandidate':
         if (_electionCaller) {
-          debug(`Master election: candidate ${message.data.id}.${message.data.isMaster ? ' Is master.' : ''}`)
+          debug(`Master election: candidate ${nodeIdToName(message.data.id)}.${message.data.isMaster ? ' Is master.' : ''}`)
           if (!_masterCandidate) {
             _masterCandidate = message.data
             return
@@ -84,9 +92,12 @@ function ElectionCoordinator (_settings) {
         _voting = false
         if (!_master || _master.id !== message.data.newMaster.id) {
           _master = message.data.newMaster
-          coordinator.emit('newMaster', _master)
+          coordinator.emit('newMaster', {
+            ..._master,
+            name: nodeIdToName(_master.id)
+          })
         } else {
-          debug(`Master election: confirmed master ${_master.id}`)
+          debug(`Master election: confirmed master ${nodeIdToName(_master.id)}`)
         }
     }
     _intCmd.send([messenger, _, ''])
@@ -111,7 +122,7 @@ function ElectionCoordinator (_settings) {
         endpoints: _masterCandidate.endpoints
       }
       debug('Master election: time finished')
-      debug(`Master election: winner is ${JSON.stringify(newMaster, null, 2)}`)
+      debug(`Master election: winner is ${nodeIdToName(newMaster.id)} ${JSON.stringify(newMaster, null, 2)}`)
       _broadcastMessage('electionWinner', {newMaster})
       _electionCaller = false
       _masterCandidate = false
