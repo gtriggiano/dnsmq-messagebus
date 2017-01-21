@@ -28,6 +28,7 @@ function ElectionCoordinator (_settings) {
     data = data || {}
     let message = {type, data}
     dns.resolve4(host, (err, addresses) => {
+      debug(`Broadcasting message '${type}' to '${host}' nodes: ${addresses}`)
       if (err) return
       addresses.forEach(address => {
         let messenger = zmq.socket('req')
