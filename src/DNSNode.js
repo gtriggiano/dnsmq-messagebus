@@ -34,8 +34,9 @@ function DNSNode (host, _settings) {
   let node = new EventEmitter()
 
   //  Debug
-  const debug = D('dnsmq-messagebus:dnsnode')
-  node.debug = (...args) => debug(_name, ...args)
+  const _debug = D('dnsmq-messagebus:dnsnode')
+  const _debugHeartbeat = D('dnsmq-messagebus:dnsnode:heartbeat')
+  const debug = (...args) => _debug(_name, ...args)
 
   let {
     electionTimeout,
@@ -46,7 +47,7 @@ function DNSNode (host, _settings) {
   // Private API
   let _id = `${zeropad(99 - electionPriority, 2)}-${uuid.v4()}`
   let _name = nodeIdToName(_id)
-  let _masterBroker = MasterMessagesBroker(_id)
+  let _masterBroker = MasterMessagesBroker({id: _id})
   let _nodesUpdater = ExternalNodesUpdater(settings)
   let _electionCoordinator = new ElectionCoordinator({
     host,
@@ -54,7 +55,7 @@ function DNSNode (host, _settings) {
     electionTimeout,
     node,
     masterBroker: _masterBroker,
-    debug: node.debug
+    debug
   })
   _electionCoordinator.on('newMaster', (newMaster) => {
     _lastHeartbeatReceivedTime = Date.now()
@@ -66,7 +67,7 @@ function DNSNode (host, _settings) {
       _connectedMaster = newMaster
       _connectToMaster()
     }
-    if (newMaster.id === _id) {
+    if (newMaster.name === _name) {
       _masterBroker.startHeartbeats()
     } else {
       _masterBroker.stoptHeartbeats()
@@ -83,7 +84,7 @@ function DNSNode (host, _settings) {
     let passedTime = Date.now() - _lastHeartbeatReceivedTime
     if (passedTime > HEARTBEAT_TIMEOUT) {
       if (!_electionCoordinator.voting) {
-        node.debug('Missing master...')
+        debug('Missing master...')
         _electionCoordinator.startElection()
       }
     }
@@ -100,7 +101,7 @@ function DNSNode (host, _settings) {
       }
     }
 
-    node.debug('Connecting to new master: ', nodeIdToName(_connectedMaster.id))
+    debug('Connecting to new master: ', nodeIdToName(_connectedMaster.id))
 
     _newIntPub.monitor()
     _newIntPub.on('connect', () => {
@@ -124,13 +125,15 @@ function DNSNode (host, _settings) {
     _subscribedChannels.forEach(channel => _newIntSub.subscribe(channel))
     _newIntSub.connect(_connectedMaster.endpoints.pub)
     _newIntSub.on('message', (channelBuffer, ...argsBuffers) => {
+      _lastHeartbeatReceivedTime = Date.now()
+
       let channel = channelBuffer.toString()
       let args = argsBuffers.map(buffer => buffer.toString())
 
       if (channel === 'heartbeats') {
+        _debugHeartbeat(args[0])
         let master = JSON.parse(args[0])
-        if (_connectedMaster.id === master.id) {
-          _lastHeartbeatReceivedTime = Date.now()
+        if (_connectedMaster.name === master.name) {
           _nodesUpdater.publish(channelBuffer, ...argsBuffers)
         }
         return
@@ -154,14 +157,16 @@ function DNSNode (host, _settings) {
 
   // Public API
   function connect () {
-    node.debug('Connecting...')
+    debug('Connecting...')
     _masterBroker.bind()
     _nodesUpdater.bind()
     _electionCoordinator.bind()
+
+    _checkHeartbeat()
     _checkHearbeatInterval = setInterval(_checkHeartbeat, HEARTBEAT_INTERVAL_CHECK)
   }
   function disconnect () {
-    node.debug('Disconnecting...')
+    debug('Disconnecting...')
     clearInterval(_checkHearbeatInterval)
     if (_id !== _connectedMaster.id) return _teardown()
 
