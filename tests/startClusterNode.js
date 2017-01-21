@@ -1,7 +1,7 @@
 import { DNSNode } from '../src'
 
-let messagebus = DNSNode('cluster', {debug: true})
+let messagebus = DNSNode('cluster')
 messagebus.connect()
 messagebus.on('connect', () => {
-  messagebus.debug('CONNECTED')
+  console.log('CONNECTED')
 })
