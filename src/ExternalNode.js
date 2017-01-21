@@ -1,5 +1,4 @@
 import D from 'debug'
-import util from 'util'
 import dns from 'dns'
 import uuid from 'uuid'
 import zmq from 'zeromq'
@@ -17,33 +16,25 @@ const invariantMessage = prefixString('[ExternalNode Invariant]: ')
 
 let internalEventsChannels = ['connect', 'disconnect', 'connection:failure', 'heartbeats']
 
-let defaultSettings = {
-  externalUpdatesPort: 50081
-}
-
 function ExternalNode (host, _settings) {
-  let instance = this instanceof ExternalNode
-  if (!instance) return new ExternalNode(host, _settings)
+  let settings = {...defaultSettings, ..._settings, host}
+  _validateSettings(settings)
 
-  let node = this
+  //  Debug
+  const _debug = D('dnsmq-messagebus:externalnode')
+  const _debugHeartbeat = D('dnsmq-messagebus:externalnode:heartbeat')
+  const debug = (...args) => _debug(_name, ...args)
 
-  // Settings
-  let settings = Object.assign({}, defaultSettings, _settings)
+  let node = new EventEmitter()
+
   let { externalUpdatesPort } = settings
-
-  // Settings validation
-  if (!host || !isString(host)) throw new TypeError(ctorMessage('host is mandatory and should be a string.'))
-  if (!isInteger(externalUpdatesPort) || externalUpdatesPort <= 0) throw new TypeError(ctorMessage('settings.externalUpdatesPort should be a positive integer.'))
-
-  // Emitter inheritance
-  EventEmitter.call(this)
 
   // Private API
   let _id = `EX-${uuid.v4()}`
   let _name = nodeIdToName(_id)
   let _connected = false
   let _seeking = false
-  let _connectedMaster = {}
+  let _knownMaster = false
   let _checkHearbeatInterval
   let _lastHeartbeatReceivedTime = 0
   let _subscribedChannels = []
@@ -52,7 +43,8 @@ function ExternalNode (host, _settings) {
   let _checkHeartbeat = () => {
     let passedTime = Date.now() - _lastHeartbeatReceivedTime
     if (passedTime > HEARTBEAT_TIMEOUT) {
-      node.debug('Missing master...')
+      debug('Missing master node')
+      _knownMaster = false
       if (_connected) {
         _connected = false
         node.emit('disconnect')
@@ -63,31 +55,37 @@ function ExternalNode (host, _settings) {
   let _seekForMaster = () => {
     if (_seeking) return
     _seeking = true
+
+    debug(`Seeking for master node`)
     dns.resolve4(host, (err, addresses) => {
       if (err) return
-      let _updating = zmq.socket('sub')
-      let _exit = false
-      let _onHeartbeatReceived = (channelBuffer, ...argsBuffers) => {
+      let _foundMaster = false
+
+      const _onMasterHeartbeat = (_, masterJSON) => {
         _seeking = false
-        let args = argsBuffers.map(buffer => buffer.toString())
-        let master = JSON.parse(args[0])
-        _connectedMaster = master
+        _foundMaster = true
+        _knownMaster = JSON.parse(masterJSON)
+        _feelerSocket.close()
+
+        debug(`Found master node ${nodeIdToName(_knownMaster.id)}`)
+        _lastHeartbeatReceivedTime = Date.now()
         _connectToMaster()
-        _updating.close()
-        _exit = true
       }
-      _updating.subscribe('heartbeats')
-      _updating.once('message', _onHeartbeatReceived)
-      setTimeout(function () {
-        if (_exit) return
+
+      setTimeout(() => {
+        if (_foundMaster) return
         _seeking = false
-        _updating.removeListener('message', _onHeartbeatReceived)
-        _updating.close()
+        _feelerSocket.removeListener('message', _onMasterHeartbeat)
+        _feelerSocket.close()
         node.emit('connection:failure')
       }, HEARTBEAT_TIMEOUT)
 
+      let _feelerSocket = zmq.socket('sub')
+      _feelerSocket.subscribe('heartbeats')
+      _feelerSocket.once('message', _onMasterHeartbeat)
+
       addresses.forEach(address => {
-        _updating.connect(`tcp://${address}:${settings.externalUpdatesPort}`)
+        _feelerSocket.connect(`tcp://${address}:${externalUpdatesPort}`)
       })
     })
   }
@@ -99,12 +97,12 @@ function ExternalNode (host, _settings) {
     function attemptTransitionToConnected () {
       if (!_connected && connections === 2) {
         _connected = true
+        debug(`CONNECTED`)
         node.emit('connect')
       }
     }
 
-    node.debug('Connecting to new master: ', nodeIdToName(_connectedMaster.id))
-    _lastHeartbeatReceivedTime = Date.now()
+    debug(`Connecting to master node: ${nodeIdToName(_knownMaster.id)}`)
 
     _newIntPub.monitor()
     _newIntPub.on('connect', () => {
@@ -114,7 +112,7 @@ function ExternalNode (host, _settings) {
       connections++
       attemptTransitionToConnected()
     })
-    _newIntPub.connect(_connectedMaster.endpoints.sub)
+    _newIntPub.connect(_knownMaster.endpoints.sub)
 
     _newIntSub.monitor()
     _newIntSub.on('connect', () => {
@@ -126,17 +124,18 @@ function ExternalNode (host, _settings) {
     })
     _newIntSub.subscribe('heartbeats')
     _subscribedChannels.forEach(channel => _newIntSub.subscribe(channel))
-    _newIntSub.connect(_connectedMaster.endpoints.pub)
+    _newIntSub.connect(_knownMaster.endpoints.pub)
     _newIntSub.on('message', (channelBuffer, ...argsBuffers) => {
+      _lastHeartbeatReceivedTime = Date.now()
+
       let channel = channelBuffer.toString()
       let args = argsBuffers.map(buffer => buffer.toString())
 
       if (channel === 'heartbeats') {
+        _debugHeartbeat('')
         let master = JSON.parse(args[0])
-        if (_connectedMaster.id === master.id) {
-          _lastHeartbeatReceivedTime = Date.now()
-        } else {
-          _connectedMaster = master
+        if (_knownMaster.name !== master.name) {
+          _knownMaster = master
           _connectToMaster()
         }
         return
@@ -147,12 +146,12 @@ function ExternalNode (host, _settings) {
 
   // Public API
   function connect () {
-    node.debug('Connecting...')
+    debug('Connecting...')
     _checkHeartbeat()
     _checkHearbeatInterval = setInterval(_checkHeartbeat, HEARTBEAT_INTERVAL_CHECK)
   }
   function disconnect () {
-    node.debug('Disconnecting...')
+    debug('Disconnecting...')
     clearInterval(_checkHearbeatInterval)
     if (_intPub) _intPub.close()
     if (_intSub) _intSub.close()
@@ -162,17 +161,26 @@ function ExternalNode (host, _settings) {
     node.emit('disconnect')
   }
   function publish (channel, ...args) {
-    if (~internalEventsChannels.indexOf(channel)) return
-    if (_intPub) {
-      _intPub.send([channel, ...args])
+    if (~internalEventsChannels.indexOf(channel)) {
+      console.warn(`dnsmq-messagebus:externalnode Channel '${channel}' is used internally and you cannot publish in it.`)
+      return node
     }
+    if (!_intPub) {
+      console.warn(`dnsmq-messagebus:externalnode Node is not connected.`)
+      return node
+    }
+    _intPub.send([channel, ...args])
+    return node
   }
   function subscribe (channels) {
     if (!isArray(channels)) channels = [channels]
     if (!every(channels, isString)) throw new TypeError(invariantMessage('subscribe channels must be represented by strings'))
 
     channels.forEach(channel => {
-      if (~internalEventsChannels.indexOf(channel)) return
+      if (~internalEventsChannels.indexOf(channel)) {
+        console.warn(`Channel '${channel} is used internally and you cannot subscribe to it.'`)
+        return
+      }
       if (_intSub) _intSub.subscribe(channel)
       if (!~_subscribedChannels.indexOf(channel)) {
         _subscribedChannels.push(channel)
@@ -184,7 +192,10 @@ function ExternalNode (host, _settings) {
     if (!every(channels, isString)) throw new TypeError(invariantMessage('subscribe channels must be represented by strings'))
 
     channels.forEach(channel => {
-      if (~internalEventsChannels.indexOf(channel)) return
+      if (~internalEventsChannels.indexOf(channel)) {
+        console.warn(`Channel '${channel} is used internally and you cannot unsubscribe from it.'`)
+        return
+      }
       if (_intSub) _intSub.unsubscribe(channel)
       let index = _subscribedChannels.indexOf(channel)
       if (index >= 0) {
@@ -193,40 +204,53 @@ function ExternalNode (host, _settings) {
     })
   }
 
-  //  Debug
-  const debug = D('dnsmq-messagebus:externalnode')
-  node.debug = (...args) => debug(_name, ...args)
-
-  // Instance decoration
-  Object.defineProperty(node, 'id', {
-    get: () => _id,
-    set: () => console.warn(invariantMessage('You cannot change the .id of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'name', {
-    get: () => _name,
-    set: () => console.warn(invariantMessage('You cannot change the .name of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'type', {
-    get: () => EXTERNAL_NODE,
-    set: () => console.warn(invariantMessage('You cannot change the .type of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'connected', {
-    get: () => _connected,
-    set: () => console.warn(invariantMessage('You cannot manually change the .connected status of a dnsNode instance'))
-  })
-  Object.defineProperty(node, 'master', {
-    get: () => _connectedMaster,
-    set: () => console.warn(invariantMessage('You cannot manually change the .master reference of a dnsNode instance'))
-  })
-  Object.assign(node, {
-    connect,
-    disconnect,
-    publish,
-    subscribe,
-    unsubscribe
+  return Object.defineProperties(node, {
+    id: {
+      get: () => _id,
+      set: () => console.warn(invariantMessage('You cannot change the .id of a dnsNode instance'))
+    },
+    name: {
+      get: () => _name,
+      set: () => console.warn(invariantMessage('You cannot change the .name of a dnsNode instance'))
+    },
+    type: {
+      get: () => EXTERNAL_NODE,
+      set: () => console.warn(invariantMessage('You cannot change the .type of a dnsNode instance'))
+    },
+    connected: {
+      get: () => _connected,
+      set: () => console.warn(invariantMessage('You cannot manually change the .connected status of a dnsNode instance'))
+    },
+    master: {
+      get: () => _knownMaster
+                  ? {
+                    ..._knownMaster,
+                    name: nodeIdToName(_knownMaster.id)
+                  }
+                  : false,
+      set: () => console.warn(invariantMessage('You cannot manually change the .master reference of a dnsNode instance'))
+    },
+    connect: {value: connect},
+    disconnect: {value: disconnect},
+    publish: {value: publish},
+    subscribe: {value: subscribe},
+    unsubscribe: {value: unsubscribe}
   })
 }
 
-util.inherits(ExternalNode, EventEmitter)
+let defaultSettings = {
+  externalUpdatesPort: 50081
+}
+
+function _validateSettings (settings) {
+  const {
+    host,
+    externalUpdatesPort
+  } = settings
+
+  // Settings validation
+  if (!host || !isString(host)) throw new TypeError(ctorMessage('host is mandatory and should be a string.'))
+  if (!isInteger(externalUpdatesPort) || externalUpdatesPort <= 0) throw new TypeError(ctorMessage('settings.externalUpdatesPort should be a positive integer.'))
+}
 
 export default ExternalNode
