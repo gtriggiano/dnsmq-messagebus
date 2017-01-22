@@ -67,7 +67,7 @@ function ExternalNode (host, _settings) {
         _knownMaster = JSON.parse(masterJSON)
         _feelerSocket.close()
 
-        debug(`Found master node ${nodeIdToName(_knownMaster.id)}`)
+        debug(`Found master node ${_knownMaster.name}`)
         _lastHeartbeatReceivedTime = Date.now()
         _connectToMaster()
       }
@@ -102,7 +102,7 @@ function ExternalNode (host, _settings) {
       }
     }
 
-    debug(`Connecting to master node: ${nodeIdToName(_knownMaster.id)}`)
+    debug(`Connecting to master node: ${_knownMaster.name}`)
 
     _newIntPub.monitor()
     _newIntPub.on('connect', () => {
