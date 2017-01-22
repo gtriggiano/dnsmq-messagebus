@@ -19,10 +19,12 @@ function MasterMessagesBroker ({name}) {
 
   //  Debug
   const _debug = D('dnsmq-messagebus:dnsnode:masterbroker')
+  const _debugHeartbeat = D('dnsmq-messagebus:dnsnode:masterbroker:heartbeat')
   const debug = (...args) => _debug(name, ...args)
 
   function _sendHeartbeat () {
     if (!_bound) return
+    _debugHeartbeat('')
     _pub.send(['heartbeats', JSON.stringify({
       name,
       endpoints: broker.endpoints
