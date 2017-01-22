@@ -186,7 +186,7 @@ function DNSNode (host, _settings) {
 
     function onMasterEelected (newMaster) {
       if (newMaster.id === _id) {
-        debug('It seems this is the only DNS node in the cluster. Exiting enyway')
+        debug('It seems this is the only DNS node in the cluster. Exiting anyway.')
       } else {
         debug(`Successfully elected a new master: ${newMaster.name}`)
       }

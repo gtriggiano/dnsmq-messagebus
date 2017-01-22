@@ -14,13 +14,13 @@ function getSockets () {
   return {sub: _sub, pub: _pub}
 }
 
-function MasterMessagesBroker ({name}) {
+function MasterMessagesBroker (node) {
   let broker = {}
 
   //  Debug
   const _debug = D('dnsmq-messagebus:dnsnode:masterbroker')
   const _debugHeartbeat = D('dnsmq-messagebus:dnsnode:masterbroker:heartbeat')
-  const debug = (...args) => _debug(name, ...args)
+  const debug = (...args) => _debug(node.name, ...args)
 
   function _sendHeartbeat () {
     if (!_bound) return
