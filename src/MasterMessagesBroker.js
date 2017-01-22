@@ -1,6 +1,7 @@
+import D from 'debug'
 import zmq from 'zeromq'
 
-import { nodeIdToName, getSocketPort } from './utils'
+import { getSocketPort } from './utils'
 
 const HEARTBEAT_INTERVAL = 500
 
@@ -13,7 +14,22 @@ function getSockets () {
   return {sub: _sub, pub: _pub}
 }
 
-function MasterMessagesBroker ({id}) {
+function MasterMessagesBroker ({name}) {
+  let broker = {}
+
+  //  Debug
+  const _debug = D('dnsmq-messagebus:dnsnode:masterbroker')
+  const debug = (...args) => _debug(name, ...args)
+
+  function _sendHeartbeat () {
+    if (!_bound) return
+    _pub.send(['heartbeats', JSON.stringify({
+      name,
+      endpoints: broker.endpoints
+    })])
+  }
+
+  // Private API
   let _ip
   let _sub
   let _pub
@@ -22,51 +38,46 @@ function MasterMessagesBroker ({id}) {
   let _pubPort
   let _hearbeatInterval
 
-  function _sendHeartbeat () {
-    if (!_bound) return
-    _pub.send(['heartbeats', JSON.stringify({
-      name: nodeIdToName(id),
-      endpoints: broker.endpoints
-    })])
+  // Public API
+  function bind () {
+    if (_bound) return
+    let {sub, pub} = getSockets()
+    sub.bindSync(`tcp://0.0.0.0:*`)
+    pub.bindSync(`tcp://0.0.0.0:*`)
+    _sub = sub
+    _pub = pub
+    _subPort = getSocketPort(_sub)
+    _pubPort = getSocketPort(_pub)
+    _bound = true
   }
-
-  let broker = {
-    bind () {
-      if (_bound) return
-      let {sub, pub} = getSockets()
-      sub.bindSync(`tcp://0.0.0.0:*`)
-      pub.bindSync(`tcp://0.0.0.0:*`)
-      _sub = sub
-      _pub = pub
-      _subPort = getSocketPort(_sub)
-      _pubPort = getSocketPort(_pub)
-      _bound = true
-    },
-    unbind () {
-      if (!_bound) return
-      _sub.close()
-      _pub.close()
-      _subPort = null
-      _pubPort = null
-      _bound = false
-    },
-    startHeartbeats () {
-      if (_hearbeatInterval) return
-      _sendHeartbeat()
-      _hearbeatInterval = setInterval(_sendHeartbeat, HEARTBEAT_INTERVAL)
-    },
-    stoptHeartbeats () {
-      clearInterval(_hearbeatInterval)
-      _hearbeatInterval = null
+  function unbind () {
+    if (!_bound) return
+    _sub.close()
+    _pub.close()
+    _subPort = null
+    _pubPort = null
+    _bound = false
+  }
+  function setIP (ip) {
+    if (!_ip) {
+      debug(`Discovered IP: ${ip}`)
+      _ip = ip
     }
+  }
+  function startHeartbeats () {
+    if (_hearbeatInterval) return
+    debug('Starting heartbeats')
+    _sendHeartbeat()
+    _hearbeatInterval = setInterval(_sendHeartbeat, HEARTBEAT_INTERVAL)
+  }
+  function stoptHeartbeats () {
+    if (!_hearbeatInterval) return
+    debug('Stopping heartbeats')
+    clearInterval(_hearbeatInterval)
+    _hearbeatInterval = null
   }
 
   return Object.defineProperties(broker, {
-    setIP: {
-      value: (ip) => {
-        _ip = _ip || ip
-      }
-    },
     endpoints: {
       get: () => ({
         sub: _ip ? `tcp://${_ip}:${_subPort}` : undefined,
@@ -78,7 +89,12 @@ function MasterMessagesBroker ({id}) {
         sub: _subPort,
         pub: _pubPort
       })
-    }
+    },
+    bind: {value: bind},
+    unbind: {value: unbind},
+    setIP: {value: setIP},
+    startHeartbeats: {value: startHeartbeats},
+    stoptHeartbeats: {value: stoptHeartbeats}
   })
 }
 
