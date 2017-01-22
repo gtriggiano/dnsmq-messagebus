@@ -25,10 +25,7 @@ function MasterMessagesBroker ({name}) {
   function _sendHeartbeat () {
     if (!_bound) return
     _debugHeartbeat('')
-    _pub.send(['heartbeats', JSON.stringify({
-      name,
-      endpoints: broker.endpoints
-    })])
+    _pub.send(['heartbeats', ''])
   }
 
   // Private API

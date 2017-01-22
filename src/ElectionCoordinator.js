@@ -1,3 +1,4 @@
+import D from 'debug'
 import zmq from 'zeromq'
 import dns from 'dns'
 import EventEmitter from 'eventemitter3'
@@ -10,11 +11,14 @@ function ElectionCoordinator (_settings) {
     coordinationPort,
     electionTimeout,
     node,
-    masterBroker,
-    debug
+    masterBroker
   } = _settings
 
   let coordinator = new EventEmitter()
+
+  //  Debug
+  const _debug = D('dnsmq-messagebus:dnsnode:electioncoordinator')
+  const debug = (...args) => _debug(node.name, ...args)
 
   // Private API
   let _voting = false
@@ -28,8 +32,11 @@ function ElectionCoordinator (_settings) {
     data = data || {}
     let message = {type, data}
     dns.resolve4(host, (err, addresses) => {
+      if (err) {
+        debug(`Cannot resolve host '${host}'. Check DNS infrastructure.`)
+        return
+      }
       debug(`Broadcasting message '${type}' to '${host}' nodes: ${addresses}`)
-      if (err) return
       addresses.forEach(address => {
         let messenger = zmq.socket('req')
         messenger.connect(`tcp://${address}:${coordinationPort}`)
@@ -118,6 +125,12 @@ function ElectionCoordinator (_settings) {
     _electionCaller = true
     _broadcastMessage('electionStart')
     setTimeout(function () {
+      if (!_masterCandidate) {
+        _electionCaller = false
+        debug(`No nodes answered to the master election call. Check the settings of DNS`)
+        coordinator.emit('failedElection')
+        return
+      }
       let newMaster = {
         id: _masterCandidate.id,
         endpoints: _masterCandidate.endpoints

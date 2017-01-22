@@ -52,13 +52,23 @@ function ExternalNode (host, _settings) {
       _seekForMaster()
     }
   }
+  let _monitorHeartbeats = () => {
+    _checkHeartbeat()
+    _unmonitorHeartbeats()
+    _checkHearbeatInterval = setInterval(_checkHeartbeat, HEARTBEAT_INTERVAL_CHECK)
+  }
+  let _unmonitorHeartbeats = () => clearInterval(_checkHearbeatInterval)
   let _seekForMaster = () => {
     if (_seeking) return
     _seeking = true
+    _unmonitorHeartbeats()
 
     debug(`Seeking for master node`)
     dns.resolve4(host, (err, addresses) => {
-      if (err) return
+      if (err) {
+        debug(`Cannot resolve host '${host}'. Check DNS infrastructure.`)
+        return
+      }
       let _foundMaster = false
 
       const _onMasterHeartbeat = (_, masterJSON) => {
@@ -67,7 +77,7 @@ function ExternalNode (host, _settings) {
         _knownMaster = JSON.parse(masterJSON)
         _feelerSocket.close()
 
-        debug(`Found master node ${_knownMaster.name}`)
+        debug(`Discovered master node ${_knownMaster.name}`)
         _lastHeartbeatReceivedTime = Date.now()
         _connectToMaster()
       }
@@ -77,6 +87,7 @@ function ExternalNode (host, _settings) {
         _seeking = false
         _feelerSocket.removeListener('message', _onMasterHeartbeat)
         _feelerSocket.close()
+        debug(`Could not discover master node.`)
         node.emit('connection:failure')
       }, HEARTBEAT_TIMEOUT)
 
@@ -106,6 +117,7 @@ function ExternalNode (host, _settings) {
 
     _newIntPub.monitor()
     _newIntPub.on('connect', () => {
+      debug(`Connected to master ${_knownMaster.name} SUB socket`)
       _newIntPub.unmonitor()
       if (_intPub) _intPub.close()
       _intPub = _newIntPub
@@ -116,6 +128,7 @@ function ExternalNode (host, _settings) {
 
     _newIntSub.monitor()
     _newIntSub.on('connect', () => {
+      debug(`Connected to master ${_knownMaster.name} PUB socket`)
       _newIntSub.unmonitor()
       if (_intSub) _intSub.close()
       _intSub = _newIntSub
@@ -147,12 +160,11 @@ function ExternalNode (host, _settings) {
   // Public API
   function connect () {
     debug('Connecting...')
-    _checkHeartbeat()
-    _checkHearbeatInterval = setInterval(_checkHeartbeat, HEARTBEAT_INTERVAL_CHECK)
+    _monitorHeartbeats()
   }
   function disconnect () {
     debug('Disconnecting...')
-    clearInterval(_checkHearbeatInterval)
+    _unmonitorHeartbeats()
     if (_intPub) _intPub.close()
     if (_intSub) _intSub.close()
 
