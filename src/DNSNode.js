@@ -184,7 +184,7 @@ function DNSNode (host, _settings) {
     let _nodeId = _id
     _id = `zzzzzz-${_id}`
 
-    function onMasterEelected (newMaster) {
+    function onMasterElected (newMaster) {
       if (newMaster.id === _id) {
         debug('It seems this is the only DNS node in the cluster. Exiting anyway.')
       } else {
@@ -192,9 +192,9 @@ function DNSNode (host, _settings) {
       }
       _id = _nodeId
       _masterBroker.signalNewMasterToExternalNodes(newMaster)
-      _electionCoordinator.removeListener('newMaster', onMasterEelected)
+      _electionCoordinator.removeListener('newMaster', onMasterElected)
       _nodesUpdater.publish('heartbeats', JSON.stringify(newMaster))
-      setTimeout(_teardown, 10)
+      setTimeout(_teardown, 100)
     }
 
     function onFailedElection () {
@@ -203,7 +203,7 @@ function DNSNode (host, _settings) {
       setTimeout(_teardown, 10)
     }
 
-    _electionCoordinator.on('newMaster', onMasterEelected)
+    _electionCoordinator.on('newMaster', onMasterElected)
     _electionCoordinator.on('failedElection', onFailedElection)
     _electionCoordinator.startElection()
   }
