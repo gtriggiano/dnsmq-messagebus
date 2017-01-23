@@ -146,11 +146,13 @@ function ExternalNode (host, _settings) {
 
       if (channel === 'heartbeats') {
         _debugHeartbeat('')
-        let master = JSON.parse(args[0])
-        if (_knownMaster.name !== master.name) {
-          _knownMaster = master
-          _connectToMaster()
-        }
+        return
+      }
+      if (channel === 'newMaster') {
+        let newMaster = JSON.parse(args[0])
+        _knownMaster = newMaster
+        debug(`Received notice of new master: ${nodeIdToName(_knownMaster.id)}`)
+        _connectToMaster()
         return
       }
       node.emit(channel, ...args)

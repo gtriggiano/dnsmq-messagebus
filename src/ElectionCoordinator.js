@@ -133,10 +133,11 @@ function ElectionCoordinator (_settings) {
       }
       let newMaster = {
         id: _masterCandidate.id,
+        name: nodeIdToName(newMaster.id),
         endpoints: _masterCandidate.endpoints
       }
       debug('Master election: time finished')
-      debug(`Master election: winner is ${nodeIdToName(newMaster.id)} ${JSON.stringify(newMaster, null, 2)}`)
+      debug(`Master election: winner is ${newMaster.name} ${JSON.stringify(newMaster, null, 2)}`)
       _broadcastMessage('electionWinner', {newMaster})
       _electionCaller = false
       _masterCandidate = false

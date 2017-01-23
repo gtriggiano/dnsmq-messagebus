@@ -63,6 +63,11 @@ function MasterMessagesBroker (node) {
       _ip = ip
     }
   }
+  function signalNewMasterToExternalNodes (newMaster) {
+    if (_bound) {
+      _pub.send('newMaster', JSON.stringify(newMaster))
+    }
+  }
   function startHeartbeats () {
     if (_hearbeatInterval) return
     debug('Starting heartbeats')
@@ -92,6 +97,7 @@ function MasterMessagesBroker (node) {
     bind: {value: bind},
     unbind: {value: unbind},
     setIP: {value: setIP},
+    signalNewMasterToExternalNodes: {value: signalNewMasterToExternalNodes},
     startHeartbeats: {value: startHeartbeats},
     stoptHeartbeats: {value: stoptHeartbeats}
   })
