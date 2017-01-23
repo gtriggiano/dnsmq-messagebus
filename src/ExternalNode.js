@@ -151,7 +151,7 @@ function ExternalNode (host, _settings) {
       if (channel === 'newMaster') {
         let newMaster = JSON.parse(args[0])
         _knownMaster = newMaster
-        debug(`Received notice of new master: ${nodeIdToName(_knownMaster.id)}`)
+        debug(`Received notice of new master: ${_knownMaster.name}`)
         _connectToMaster()
         return
       }
