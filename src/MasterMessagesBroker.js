@@ -65,7 +65,7 @@ function MasterMessagesBroker (node) {
   }
   function signalNewMasterToExternalNodes (newMaster) {
     if (_bound) {
-      _pub.send('newMaster', JSON.stringify(newMaster))
+      _pub.send(['newMaster', JSON.stringify(newMaster)])
     }
   }
   function startHeartbeats () {
