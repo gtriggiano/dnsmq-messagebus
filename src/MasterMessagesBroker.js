@@ -65,6 +65,7 @@ function MasterMessagesBroker (node) {
   }
   function signalNewMasterToExternalNodes (newMaster) {
     if (_bound) {
+      debug(`Signaling new master to external nodes`)
       _pub.send(['newMaster', JSON.stringify(newMaster)])
     }
   }

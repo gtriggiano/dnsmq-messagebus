@@ -149,7 +149,7 @@ function DNSNode (host, _settings) {
       node.emit(channel, ...args)
     })
   }
-  let _teardown = () => {
+  let _teardownPubSubSockets = () => {
     if (_intPub) _intPub.close()
     if (_intSub) _intSub.close()
 
@@ -158,9 +158,11 @@ function DNSNode (host, _settings) {
 
     _masterBroker.stoptHeartbeats()
     _masterBroker.unbind()
+    node.emit('disconnect')
+  }
+  let _teardownUpdaterAndCoordinator = () => {
     _nodesUpdater.unbind()
     _electionCoordinator.unbind()
-    node.emit('disconnect')
   }
 
   // Public API
@@ -177,30 +179,42 @@ function DNSNode (host, _settings) {
     _unmonitorHeartbeats()
     _electionCoordinator.removeListener('newMaster', _onMasterChange)
 
-    if (_id !== _connectedMaster.id) return _teardown()
+    if (_id !== _connectedMaster.id) {
+      _teardownUpdaterAndCoordinator()
+      _teardownPubSubSockets()
+      return
+    }
 
     debug(`I'm master. Trying to elect anotherone...`)
     // Change this node id to have the lowest election priority
     let _nodeId = _id
     _id = `zzzzzz-${_id}`
 
+    function onElectionEnd () {
+      _id = _nodeId
+      _electionCoordinator.removeListener('newMaster', onMasterElected)
+      _electionCoordinator.removeListener('failedElection', onFailedElection)
+    }
+
     function onMasterElected (newMaster) {
+      onElectionEnd()
+
       if (newMaster.id === _id) {
         debug('It seems this is the only DNS node in the cluster. Exiting anyway.')
       } else {
         debug(`Successfully elected a new master: ${newMaster.name}`)
       }
-      _id = _nodeId
+
+      _teardownUpdaterAndCoordinator()
       _masterBroker.signalNewMasterToExternalNodes(newMaster)
-      _electionCoordinator.removeListener('newMaster', onMasterElected)
-      _nodesUpdater.publish('heartbeats', JSON.stringify(newMaster))
-      setTimeout(_teardown, 100)
+
+      setTimeout(_teardownPubSubSockets, 1000)
     }
 
     function onFailedElection () {
-      _id = _nodeId
+      onElectionEnd()
       debug(`Election of a new master failed`)
-      setTimeout(_teardown, 10)
+      setTimeout(_teardownPubSubSockets, 10)
     }
 
     _electionCoordinator.on('newMaster', onMasterElected)
