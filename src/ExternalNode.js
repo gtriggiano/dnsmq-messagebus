@@ -89,6 +89,7 @@ function ExternalNode (host, _settings) {
         _feelerSocket.close()
         debug(`Could not discover master node.`)
         node.emit('connection:failure')
+        _monitorHeartbeats()
       }, HEARTBEAT_TIMEOUT)
 
       let _feelerSocket = zmq.socket('sub')
@@ -106,7 +107,9 @@ function ExternalNode (host, _settings) {
 
     let connections = 0
     function attemptTransitionToConnected () {
-      if (!_connected && connections === 2) {
+      if (connections !== 2) return
+      _monitorHeartbeats()
+      if (!_connected) {
         _connected = true
         debug(`CONNECTED`)
         node.emit('connect')
