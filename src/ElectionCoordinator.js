@@ -133,7 +133,7 @@ function ElectionCoordinator (_settings) {
       }
       let newMaster = {
         id: _masterCandidate.id,
-        name: nodeIdToName(newMaster.id),
+        name: nodeIdToName(_masterCandidate.id),
         endpoints: _masterCandidate.endpoints
       }
       debug('Master election: time finished')
