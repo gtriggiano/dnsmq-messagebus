@@ -14,7 +14,7 @@ const HEARTBEAT_TIMEOUT = 1500
 const ctorMessage = prefixString('[ExternalNode constructor]: ')
 const invariantMessage = prefixString('[ExternalNode Invariant]: ')
 
-let internalEventsChannels = ['connect', 'disconnect', 'connection:failure', 'heartbeats']
+let internalEventsChannels = ['connect', 'disconnect', 'connection:failure', 'heartbeats', 'newMaster', 'changedMaster']
 
 function ExternalNode (host, _settings) {
   let settings = {...defaultSettings, ..._settings, host}
@@ -34,17 +34,74 @@ function ExternalNode (host, _settings) {
   let _name = nodeIdToName(_id)
   let _connected = false
   let _seeking = false
-  let _knownMaster = false
+  let _connectedMaster = false
   let _checkHearbeatInterval
   let _lastHeartbeatReceivedTime = 0
+
   let _subscribedChannels = []
-  let _intPub
-  let _intSub
+  let _intPub = zmq.socket('pub')
+  let _intSub = zmq.socket('sub')
+  _intPub.monitor()
+  _intSub.monitor()
+  _intSub.subscribe('heartbeats')
+  _intSub.on('message', (channelBuffer, ...argsBuffers) => {
+    _lastHeartbeatReceivedTime = Date.now()
+
+    let channel = channelBuffer.toString()
+    let args = argsBuffers.map(buffer => buffer.toString())
+
+    if (channel === 'heartbeats') {
+      _debugHeartbeat('')
+      return
+    }
+
+    if (channel === 'newMaster') {
+      let newMaster = JSON.parse(args[0])
+      debug(`Received notice of new master: ${newMaster.name}`)
+      _connectToMaster(newMaster)
+      return
+    }
+
+    node.emit(channel, ...args)
+  })
+
+  let _connectToMasterPub = (master) => new Promise((resolve, reject) => {
+    _intSub.on('connect', (ep) => {
+      console.log(ep)
+      debug(`Connected to master ${master.name} PUB socket`)
+      resolve()
+    })
+    _intSub.connect(master.endpoint.pub)
+  })
+  let _connectToMasterSub = (master) => new Promise((resolve, reject) => {
+    _intPub.on('connect', (ep) => {
+      console.log(ep)
+      debug(`Connected to master ${master.name} SUB socket`)
+      resolve()
+    })
+    _intPub.connect(master.endpoint.sub)
+  })
+  let _disconnectFromMasterPub = (master) => new Promise((resolve, reject) => {
+    _intSub.on('disconnect', (ep) => {
+      console.log(ep)
+      debug(`Disconnected from ${master.name} PUB socket`)
+      resolve()
+    })
+    _intSub.disconnect(master.endpoint.pub)
+  })
+  let _disconnectFromMasterSub = (master) => new Promise((resolve, reject) => {
+    _intPub.on('disconnect', (ep) => {
+      console.log(ep)
+      debug(`Disconnected from ${master.name} SUB socket`)
+      resolve()
+    })
+    _intPub.disconnect(master.endpoint.sub)
+  })
+
   let _checkHeartbeat = () => {
     let passedTime = Date.now() - _lastHeartbeatReceivedTime
     if (passedTime > HEARTBEAT_TIMEOUT) {
       debug('Missing master node')
-      _knownMaster = false
       if (_connected) {
         _connected = false
         node.emit('disconnect')
@@ -71,15 +128,14 @@ function ExternalNode (host, _settings) {
       }
       let _foundMaster = false
 
-      const _onMasterHeartbeat = (_, masterJSON) => {
+      const _onMasterHeartbeat = (_, newMaster) => {
         _seeking = false
         _foundMaster = true
-        _knownMaster = JSON.parse(masterJSON)
         _feelerSocket.close()
 
-        debug(`Discovered master node ${_knownMaster.name}`)
+        debug(`Discovered master node ${newMaster.name}`)
         _lastHeartbeatReceivedTime = Date.now()
-        _connectToMaster()
+        _connectToMaster(newMaster)
       }
 
       setTimeout(() => {
@@ -101,64 +157,35 @@ function ExternalNode (host, _settings) {
       })
     })
   }
-  let _connectToMaster = () => {
-    let _newIntPub = zmq.socket('pub')
-    let _newIntSub = zmq.socket('sub')
+  let _connectToMaster = (masterNode) => {
+    debug(`Connecting to master node: ${masterNode.name}`)
 
-    let connections = 0
-    function attemptTransitionToConnected () {
-      if (connections !== 2) return
-      _monitorHeartbeats()
+    let connected = Promise.all([
+      _connectToMasterPub(masterNode),
+      _connectToMasterSub(masterNode)
+    ])
+
+    let disconnected = Promise.resolve()
+    if (_connectedMaster) {
+      disconnected = Promise.all([
+        _disconnectFromMasterPub(_connectedMaster),
+        _disconnectFromMasterSub(_connectedMaster)
+      ])
+    }
+
+    return Promise.all([
+      connected,
+      disconnected
+    ])
+    .then(() => {
       if (!_connected) {
         _connected = true
         debug(`CONNECTED`)
         node.emit('connect')
+      } else {
+        debug('CHANGED MASTER')
+        node.emit('changedMaster')
       }
-    }
-
-    debug(`Connecting to master node: ${_knownMaster.name}`)
-
-    _newIntPub.monitor()
-    _newIntPub.on('connect', () => {
-      debug(`Connected to master ${_knownMaster.name} SUB socket`)
-      _newIntPub.unmonitor()
-      if (_intPub) _intPub.close()
-      _intPub = _newIntPub
-      connections++
-      attemptTransitionToConnected()
-    })
-    _newIntPub.connect(_knownMaster.endpoints.sub)
-
-    _newIntSub.monitor()
-    _newIntSub.on('connect', () => {
-      debug(`Connected to master ${_knownMaster.name} PUB socket`)
-      _newIntSub.unmonitor()
-      if (_intSub) _intSub.close()
-      _intSub = _newIntSub
-      connections++
-      attemptTransitionToConnected()
-    })
-    _newIntSub.subscribe('heartbeats')
-    _subscribedChannels.forEach(channel => _newIntSub.subscribe(channel))
-    _newIntSub.connect(_knownMaster.endpoints.pub)
-    _newIntSub.on('message', (channelBuffer, ...argsBuffers) => {
-      _lastHeartbeatReceivedTime = Date.now()
-
-      let channel = channelBuffer.toString()
-      let args = argsBuffers.map(buffer => buffer.toString())
-
-      if (channel === 'heartbeats') {
-        _debugHeartbeat('')
-        return
-      }
-      if (channel === 'newMaster') {
-        let newMaster = JSON.parse(args[0])
-        _knownMaster = newMaster
-        debug(`Received notice of new master: ${_knownMaster.name}`)
-        _connectToMaster()
-        return
-      }
-      node.emit(channel, ...args)
     })
   }
 
@@ -195,7 +222,7 @@ function ExternalNode (host, _settings) {
 
     channels.forEach(channel => {
       if (~internalEventsChannels.indexOf(channel)) {
-        console.warn(`Channel '${channel} is used internally and you cannot subscribe to it.'`)
+        console.warn(`Channel '${channel}' is used internally and you cannot subscribe to it.`)
         return
       }
       if (_intSub) _intSub.subscribe(channel)
@@ -210,7 +237,7 @@ function ExternalNode (host, _settings) {
 
     channels.forEach(channel => {
       if (~internalEventsChannels.indexOf(channel)) {
-        console.warn(`Channel '${channel} is used internally and you cannot unsubscribe from it.'`)
+        console.warn(`Channel '${channel}' is used internally and you cannot unsubscribe from it.`)
         return
       }
       if (_intSub) _intSub.unsubscribe(channel)
@@ -239,12 +266,7 @@ function ExternalNode (host, _settings) {
       set: () => console.warn(invariantMessage('You cannot manually change the .connected status of a dnsNode instance'))
     },
     master: {
-      get: () => _knownMaster
-                  ? {
-                    ..._knownMaster,
-                    name: nodeIdToName(_knownMaster.id)
-                  }
-                  : false,
+      get: () => _connectedMaster ? {..._connectedMaster} : undefined,
       set: () => console.warn(invariantMessage('You cannot manually change the .master reference of a dnsNode instance'))
     },
     connect: {value: connect},
