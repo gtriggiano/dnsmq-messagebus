@@ -104,6 +104,8 @@ function ExternalNode (host, _settings) {
       debug('Missing master node')
       if (_connected) {
         _connected = false
+        _intPub.disconnect()
+        _intSub.disconnect()
         node.emit('disconnect')
       }
       _seekForMaster()
@@ -159,7 +161,7 @@ function ExternalNode (host, _settings) {
   }
   let _connectToMaster = (masterNode) => {
     debug(`Connecting to master node: ${masterNode.name}`)
-
+    _unmonitorHeartbeats()
     let connected = Promise.all([
       _connectToMasterPub(masterNode),
       _connectToMasterSub(masterNode)
@@ -178,6 +180,7 @@ function ExternalNode (host, _settings) {
       disconnected
     ])
     .then(() => {
+      _lastHeartbeatReceivedTime = Date.now()
       if (!_connected) {
         _connected = true
         debug(`CONNECTED`)
@@ -186,6 +189,10 @@ function ExternalNode (host, _settings) {
         debug('CHANGED MASTER')
         node.emit('changedMaster')
       }
+    })
+    .catch(() => {})
+    .then(() => {
+      _monitorHeartbeats()
     })
   }
 
