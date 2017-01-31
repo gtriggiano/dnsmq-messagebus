@@ -3,7 +3,7 @@ import EventEmitter from 'eventemitter3'
 import { isString, isInteger, isArray, every } from 'lodash'
 
 import { EXTERNAL_NODE, DNS_NODE } from './Constants'
-import MasterMessagesBroker from './MasterMessagesBroker'
+import MasterBroker from './MasterBroker'
 import MasterElector from './MasterElector'
 import MasterFinder from './MasterFinder'
 import PubConnection from './PubConnection'
@@ -131,7 +131,7 @@ function Node (host, customSettings) {
   let _masterBroker
 
   if (!external) {
-    _masterBroker = MasterMessagesBroker(node)
+    _masterBroker = MasterBroker(node)
     _masterResolver = MasterElector(node, _masterBroker)
     _masterResolver.on('newmaster', _connectToMaster)
   } else {
