@@ -14,8 +14,13 @@ import { nodeIdToName, getNodeId, prefixString } from './utils'
 const ctorMessage = prefixString('[dnsmq-messagebus Node]: ')
 
 let internalChannels = [
-  'connect',
-  'disconnect',
+  'ready',
+  'not:ready',
+  'can:publish',
+  'cannot:publish',
+  'receiving',
+  'not:receiving',
+  'deactivated',
   'heartbeats',
   'newmaster'
 ]
@@ -166,6 +171,7 @@ function Node (host, customSettings) {
       _active = false
       _subConnection.disconnect()
       _pubConnection.disconnect()
+      node.emit('deactivated')
     } else {
       _deactivating = true
       let ensuredMaster = Promise.resolve()
