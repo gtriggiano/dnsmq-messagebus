@@ -7,7 +7,7 @@ import { timingoutCallback } from './utils'
 
 /**
  * Publishing connection factory
- * @param {object} node - The dnsNode using this component
+ * @param {object} node - The node using this component
  *
  * @return {object} publishConnection component
  */
