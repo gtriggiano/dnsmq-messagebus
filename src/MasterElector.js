@@ -173,6 +173,7 @@ function MasterElector (node, masterBroker) {
   }
   /**
    * Triggers a master election
+   * @alias resolve
    * @param  {string} [advertiseId] - A fake id to use for this node during the election
    * @return {promise} An object containing the name and the pub/sub endpoints of the master node
    */
