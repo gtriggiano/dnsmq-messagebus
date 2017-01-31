@@ -283,7 +283,7 @@ function Node (host, customSettings) {
     deactivate: {value: deactivate},
     publish: {value: publish},
     subscribe: {value: subscribe},
-    ubsubscribe: {value: unsubscribe}
+    unsubscribe: {value: unsubscribe}
   })
 }
 
