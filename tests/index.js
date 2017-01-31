@@ -1,22 +1,12 @@
 import should from 'should/as-function'
 
-import { DNSNode, ExternalNode } from '../src'
+import { Node } from '../src'
 
-const DNSHOST = process.env.DNSHOST
-
-describe('DNS-MessageBus', () => {
+describe('dnsmq-messagebus', () => {
   it('should be fun', () => {})
-  it('should export a DNSNode factory function', () => {
-    should(DNSNode).be.a.function
-    let dnsNode = DNSNode(DNSHOST)
-    should(dnsNode).be.an.instanceof(DNSNode)
+  it('should export a Node factory function', () => {
+    should(Node).be.a.function
   })
-  it('should export an ExternalNode factory function', () => {
-    should(ExternalNode).be.a.function
-    let externalNode = ExternalNode(DNSHOST)
-    should(externalNode).be.an.instanceof(ExternalNode)
-  })
-
-  require('./DNSNode-tests')
-  require('./ExternalNode-tests')
 })
+
+require('./Node')
