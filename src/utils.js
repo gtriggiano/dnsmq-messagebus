@@ -1,27 +1,19 @@
-import os from 'os'
+import uuid from 'uuid'
 import { ZMQ_LAST_ENDPOINT } from 'zeromq'
 import { curry } from 'lodash'
 
-const prefixString = curry(function prefixString (prefix, str) {
+export const prefixString = curry(function prefixString (prefix, str) {
   return `${prefix}${str}`
 })
 
-function nodeIdToName (id) { return id.substring(3, 11) }
+export function nodeIdToName (id) { return id.substring(3, 11) }
 
-function boxExternalIps () {
-  let ifaces = os.networkInterfaces()
-  return Object.keys(ifaces).reduce((ips, ifaceName) => {
-    return ips.concat(ifaces[ifaceName].filter(address => !address.internal && address.family === 'IPv4'))
-  }, []).map(({address}) => address)
-}
-
-function getSocketEndpoint (socket) {
+export function getSocketPort (socket) {
   let address = socket.getsockopt(ZMQ_LAST_ENDPOINT)
-  let ip = boxExternalIps()[0]
-  return ip ? address.replace(/0\.0\.0\.0/, ip) : undefined
+  return address.replace(/tcp:\/\/0\.0\.0\.0:/, '')
 }
 
-function zeropad (num, len) {
+export function zeropad (num, len) {
   let str = String(num)
   while (str.length < len) {
     str = `0${str}`
@@ -29,9 +21,22 @@ function zeropad (num, len) {
   return str
 }
 
-export {
-  nodeIdToName,
-  prefixString,
-  getSocketEndpoint,
-  zeropad
+export function getNodeId ({external, electionPriority}) {
+  return external
+    ? `EX-${uuid.v4()}`
+    : `${zeropad(99 - electionPriority, 2)}-${uuid.v4()}`
+}
+
+export function timingoutCallback (fn, ms) {
+  let _fired = false
+  function callback (err, ...args) {
+    if (_fired) return
+    _fired = true
+    fn(err, ...args)
+  }
+  setTimeout(() => {
+    let error = new Error('Timeout')
+    callback(error)
+  }, ms)
+  return callback
 }
