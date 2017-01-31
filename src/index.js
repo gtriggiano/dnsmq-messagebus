@@ -1,7 +1,4 @@
-import DNSNode from './DNSNode'
-import ExternalNode from './ExternalNode'
-
+import Node from './Node'
 export {
-  DNSNode,
-  ExternalNode
+  Node
 }
