@@ -124,7 +124,8 @@ function PubConnection (node) {
   }
   /**
    * takes a list of strings|buffers to publish as message's frames
-   * in the channel passed as first argument
+   * in the channel passed as first argument;
+   * decorates each message with a uid
    * @param  {string} channel
    * @param  {[string|buffer]} args
    */
