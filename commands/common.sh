@@ -54,3 +54,7 @@ function runAsService () {
     docker-compose -p $COMPOSE_PROJECT run $SERVICE $CMD
   fi
 }
+
+function separator () {
+  echo "================================================="
+}
