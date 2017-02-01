@@ -4,20 +4,69 @@
   "description": "A message bus implementation for nodes reachable through DNS resolution. Based on ØMQ",
   "main": "lib/index.js",
   "scripts": {
-    "start": "npm run clean && docker-compose run development",
-    "start-external": "npm run clean && docker-compose scale cluster=3 && sleep 4 && docker-compose up development-externalnode",
-    "stop": "docker-compose stop",
-    "clean": "npm run stop && npm run rm",
-    "rm": "docker-compose rm -f",
-    "test": "./scripts/test.sh",
-    "cluster": "npm run clean && docker-compose scale cluster=3 && docker-compose logs -f cluster",
-    "start:cluster:node": "DEBUG=dnsmq-messagebus:* babel-node tests/startClusterNode.js",
-    "test:library": "DNSHOST=testlibrary mocha --compilers js:babel-register tests/index.js",
-    "test:library:live": "DNSHOST=development mocha --compilers js:babel-register -b -w tests/index.js",
-    "test:external:node": "mocha --compilers js:babel-register tests/ExternalNode-connection-tests.js",
-    "test:external:node:live": "mocha --compilers js:babel-register -b -w tests/ExternalNode-connection-tests.js",
-    "prepublish": "docker-compose build distribution && docker-compose up distribution",
-    "build": "rm -rf lib/* && babel src -d lib"
+    "test": "./commands/tests:suite.sh",
+    "test:unit": "./commands/test:unit.sh",
+    "test:dnsnode": "./commands/test:dnsnode.sh",
+    "test:externalnode": "./commands/test:externalnode.sh",
+    "dev:test:unit": "./commands/test:unit.sh live",
+    "dev:test:behaviour": "./commands/test:behaviour.sh live",
+    "dev:test:externalnode": "./commands/test:externalnode.sh live",
+    "transpile": "./commands/transpile.sh",
+    "prepublish": "npm test"
+  },
+  "betterScripts": {
+    "test:unit": {
+      "command": "mocha tests/unit",
+      "env": {
+        "CODE_PATH": "lib"
+      }
+    },
+    "test:unit:live": {
+      "command": "mocha --compilers js:babel-register -b -w tests-src/unit",
+      "env": {
+        "CODE_PATH": "src"
+      }
+    },
+    "test:dnsnode:behaviour": {
+      "command": "mocha tests/behaviour",
+      "env": {
+        "CODE_PATH": "lib"
+      }
+    },
+    "test:dnsnode:behaviour:live": {
+      "command": "mocha --compilers js:babel-register -b -w tests-src/behaviour",
+      "env": {
+        "CODE_PATH": "src"
+      }
+    },
+    "test:externalnode:behaviour": {
+      "command": "mocha tests/behaviour",
+      "env": {
+        "CODE_PATH": "lib",
+        "EXTERNAL": true
+      }
+    },
+    "test:externalnode:behaviour:live": {
+      "command": "mocha --compilers js:babel-register -b -w tests-src/behaviour",
+      "env": {
+        "CODE_PATH": "src",
+        "EXTERNAL": true
+      }
+    },
+    "start:bus:node": {
+      "command": "babel-node tests-src/startDNSNode.js",
+      "env": {
+        "CODE_PATH": "src"
+      }
+    },
+    "start:bus:emitter": {
+      "command": "babel-node tests/startEmitter.js",
+      "env": {
+        "CODE_PATH": "src"
+      }
+    },
+    "transpile:package": {"command": "rm -rf lib/* && babel src -d lib"},
+    "transpile:tests": {"command": "rm -rf tests/* && babel tests-src -d tests"}
   },
   "keywords": [
     "zmq",
@@ -34,9 +83,10 @@
   },
   "devDependencies": {
     "babel-cli": "6.14.0",
-    "babel-preset-es2015-node4": "2.1.0",
     "babel-plugin-transform-object-rest-spread": "6.8.0",
+    "babel-preset-es2015-node4": "2.1.0",
     "babel-register": "6.14.0",
+    "better-npm-run": "0.0.14",
     "mocha": "3.0.2",
     "should": "11.1.0",
     "sinon": "1.17.5"
