@@ -26,6 +26,10 @@ if [[! $LIVE ]]; then
   echo
 else
   startService bus
+  echo
+  echo "Waiting bus setup"
+  sleep 3
+  echo
 fi
 runAsService development $EXTERNAL_CMD
 echo
