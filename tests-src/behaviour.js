@@ -62,6 +62,47 @@ describe(`Properties of ${EXTERNAL ? 'an ExternalNode' : 'a DNSNode'} connectivi
     })
     node.activate()
   })
+  it('node.subscribedChannels contains the list of channels passed to node.subscribe(...)', () => {
+    let node = Node()
+    node.subscribe('a')
+    node.subscribe(['b', 'c'])
+    should(node.subscribedChannels).be.an.Array()
+    should(node.subscribedChannels.sort()).eql(['a', 'b', 'c'])
+  })
+  it('node.subscribedChannels is not settable nor mutable', () => {
+    let node = Node()
+    node.subscribe('a')
+
+    should(() => { node.subscribedChannels = [] }).throw()
+    node.subscribedChannels.push('b')
+    should(node.subscribedChannels.length).equal(1)
+  })
+  it('node.master gets an information object about the master the node is connected to', (done) => {
+    let node = Node()
+    should(node.master).be.Null()
+    node.on('ready', () => {
+      should(node.master.name).be.a.String()
+      should(node.master.endpoints.sub).be.a.String()
+      should(node.master.endpoints.pub).be.a.String()
+      node.deactivate()
+    })
+    node.on('not:ready', () => {
+      done()
+    })
+    node.activate()
+  })
+  it('node.master is not settable nor mutable', (done) => {
+    let node = Node()
+    should(() => { node.master = {} }).throw()
+    node.subscribedChannels.push('b')
+    node.on('ready', () => {
+      node.master.prop = true
+      should(node.master.prop).be.Undefined()
+      node.deactivate()
+    })
+    node.on('deactivated', () => done())
+    node.activate()
+  })
 })
 describe(`${EXTERNAL ? 'An ExternalNode' : 'A DNSNode'} as an EventEmitter`, () => {
   it('emits a `ready` event when the node connects to the master', (done) => {
