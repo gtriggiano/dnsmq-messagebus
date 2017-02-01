@@ -34,7 +34,7 @@ function MasterBroker (node) {
 
   //  Debug
   const _debug = D('dnsmq-messagebus:masterbroker')
-  const _debugHeartbeat = D('dnsmq-messagebus:masterbroker:heartbeat')
+  const _debugHeartbeat = D('dnsmq-messagebus:masterbroker:heartbeats')
   const debug = (...args) => _debug(node.name, ...args)
 
   /**
