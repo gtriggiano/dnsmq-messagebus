@@ -4,7 +4,7 @@ set -e
 
 source "${BASH_SOURCE%/*}/common.sh"
 
-echo "dnsmq-messagebus package tests suite"
+echo "STARTING dnsmq-messagebus TEST SUITE"
 echo
 echo "Execution order:"
 echo " - UNIT TESTS"
@@ -13,8 +13,8 @@ echo " - EXTERNAL NODE BEHAVIOUR TESTS"
 echo
 echo -n "Transpiling package and tests... "
 source "${BASH_SOURCE%/*}/transpile.sh" &> /dev/null
-cleanContainers &>/dev/null
 echo "Done."
+cleanContainers
 echo
 echo
 echo "UNIT TESTS"
@@ -35,4 +35,5 @@ echo
 runAsService bus better-npm-run test:externalnode:behaviour
 echo
 separator
-cleanService bus
+echo
+echo "END dnsmq-messagebus TEST SUITE"
