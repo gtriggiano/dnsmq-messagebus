@@ -14,7 +14,8 @@ var emissionInterval = setInterval(() => {
   switch (_canPublish) {
     case true:
       messageNo++
-      node.publish('testchannel', node.name, messageNo)
+      node.publish('testChannelOne', node.name, messageNo)
+      node.publish('testChannelTwo', node.name, messageNo)
       break
     default:
       console.log()
