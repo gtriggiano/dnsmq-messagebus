@@ -7,6 +7,8 @@ services:
       context: .
       dockerfile: docker/Dev.dockerfile
     image: dnsmq-messagebus-development
+    stdin_open: true
+    tty: true
     volumes:
       - "./.babelrc:/dnsmq-messagebus/.babelrc"
       - "./src:/dnsmq-messagebus/src"
@@ -21,6 +23,8 @@ services:
       dockerfile: docker/Dev.dockerfile
     image: dnsmq-messagebus-development
     command: ["better-npm-run", "start:bus:node"]
+    stdin_open: true
+    tty: true
     volumes:
       - "./.babelrc:/dnsmq-messagebus/.babelrc"
       - "./src:/dnsmq-messagebus/src"
@@ -28,5 +32,3 @@ services:
       - "./tests-src:/dnsmq-messagebus/tests-src"
       - "./tests:/dnsmq-messagebus/tests"
       - "./package.json:/dnsmq-messagebus/package.json"
-    environment:
-      - DEBUG=dnsmq-messagebus:*,-dnsmq-messagebus:SUB:heartbeats,-dnsmq-messagebus:masterbroker:heartbeats,-dnsmq-messagebus:PUB
