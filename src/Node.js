@@ -278,7 +278,7 @@ function Node (host, customSettings) {
     isReceiving: {get: () => _subConnection.connected},
     isReady: {get: () => _pubConnection.connected && _subConnection.connected},
     subscribedChannels: {get: () => _subConnection.subscribedChannels},
-    master: {get: () => _master && {..._master}},
+    master: {get: () => _master && {..._master, endpoints: {..._master.endpoints}}},
     activate: {value: activate},
     deactivate: {value: deactivate},
     publish: {value: publish},
