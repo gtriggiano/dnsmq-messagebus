@@ -11,12 +11,15 @@ echo "Done."
 
 startService bus
 
-CMD="better-npm-run test:dnsnode"
+CMD="better-npm-run test:external"
 
 if [[ "$1" == "live" ]]; then
   CMD="$CMD:live"
 fi
 
-runAsService bus $CMD
+runAsService development $CMD
 echo
-cleanService bus
+echo -n "Cleanning... "
+cleanService development &>/dev/null
+cleanService bus &>/dev/null
+echo "Done."
