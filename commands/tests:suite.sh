@@ -8,7 +8,8 @@ echo "dnsmq-messagebus package tests suite"
 echo
 echo "Execution order:"
 echo " - UNIT TESTS"
-echo " - DNS NODE TESTS"
+echo " - DNS NODE BEHAVIOUR TESTS"
+echo " - EXTERNAL NODE BEHAVIOUR TESTS"
 echo
 echo -n "Transpiling package and tests... "
 source "${BASH_SOURCE%/*}/transpile.sh" &> /dev/null
@@ -24,14 +25,14 @@ separator
 startService bus
 separator
 echo
-echo "DNS NODE TESTS"
-runAsService bus better-npm-run test:dnsnode
+echo "DNS NODE BEHAVIOUR TESTS"
+runAsService bus better-npm-run test:dnsnode:behaviour
 echo
 separator
 echo
-echo "EXTERNAL NODE TESTS"
+echo "EXTERNAL NODE BEHAVIOUR NODE TESTS"
 echo
-runAsService bus better-npm-run test:externalnode
+runAsService bus better-npm-run test:externalnode:behaviour
 echo
 separator
 cleanService bus
