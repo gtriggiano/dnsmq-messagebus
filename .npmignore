@@ -5,6 +5,9 @@ commands/
 docker/
 docker-compose.yml
 
+# dumb-init
+dumb-init
+
 # Source folder
 src/
 
