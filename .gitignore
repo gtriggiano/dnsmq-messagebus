@@ -2,6 +2,7 @@
 
 # Distribution folder
 lib/
+tests/
 
 # NPM
 node_modules
