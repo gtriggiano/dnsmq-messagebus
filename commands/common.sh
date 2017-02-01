@@ -1,12 +1,10 @@
 #!/bin/bash
 
-COMPOSE_PROJECT=dnsmq-messagebus
-
 function cleanContainers () {
   echo
   echo -n 'Stopping and removing all containers... '
-  docker-compose -p $COMPOSE_PROJECT stop &>/dev/null
-  docker-compose -p $COMPOSE_PROJECT rm -f &>/dev/null
+  docker-compose -p dnsmq-messagebus stop &>/dev/null
+  docker-compose -p dnsmq-messagebus rm -f &>/dev/null
   echo 'Done.'
   echo
 }
@@ -16,8 +14,8 @@ function cleanService () {
   if [[ -n "$SERVICE" ]]; then
     echo
     echo -n "Stopping and removing all '$SERVICE' containers... "
-    docker-compose -p $COMPOSE_PROJECT stop $SERVICE &>/dev/null
-    docker-compose -p $COMPOSE_PROJECT rm -f $SERVICE &>/dev/null
+    docker-compose -p dnsmq-messagebus stop $SERVICE &>/dev/null
+    docker-compose -p dnsmq-messagebus rm -f $SERVICE &>/dev/null
     echo 'Done.'
     echo
   fi
@@ -28,7 +26,7 @@ function startService () {
   if [[ -n "$SERVICE" ]]; then
     echo
     echo -n "Starting service '$SERVICE'... "
-    docker-compose -p $COMPOSE_PROJECT up -d $SERVICE &>/dev/null
+    docker-compose -p dnsmq-messagebus up -d $SERVICE &>/dev/null
     echo 'Done.'
     echo
   fi
@@ -40,7 +38,7 @@ function scaleService () {
   if [[ -n "$SERVICE" && -n "$NUM"  ]]; then
     echo
     echo -n "Scaling service '$SERVICE' to '$NUM' container(s)... "
-    docker-compose -p $COMPOSE_PROJECT scale $SERVICE=$NUM &>/dev/null
+    docker-compose -p dnsmq-messagebus scale $SERVICE=$NUM &>/dev/null
     echo 'Done.'
     echo
   fi
@@ -51,7 +49,7 @@ function runAsService () {
   shift
   local CMD=$@
   if [[ -n "$SERVICE" && -n "$CMD"  ]]; then
-    docker-compose -p $COMPOSE_PROJECT run $SERVICE $CMD
+    docker-compose -p dnsmq-messagebus run $SERVICE $CMD
   fi
 }
 
