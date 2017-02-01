@@ -24,7 +24,12 @@ fi
 if [[! $LIVE ]]; then
   runAsService bus $DNS_CMD
   echo
+else
+  startService bus
 fi
 runAsService development $EXTERNAL_CMD
 echo
-cleanService bus
+cleanService development
+if [[ $LIVE ]]; then
+  cleanService bus
+fi
