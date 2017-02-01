@@ -1,68 +1,39 @@
 version: '2'
+
 services:
 
   development:
     build:
       context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "test:library:live"]
+      dockerfile: docker/Dev.dockerfile
+    image: dnsmq-messagebus-development
     volumes:
-      - "./src:/app/src"
-      - "./tests:/app/tests"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
+      - "./.babelrc:/dnsmq-messagebus/.babelrc"
+      - "./src:/dnsmq-messagebus/src"
+      - "./lib:/dnsmq-messagebus/lib"
+      - "./tests-src:/dnsmq-messagebus/tests-src"
+      - "./tests:/dnsmq-messagebus/tests"
+      - "./package.json:/dnsmq-messagebus/package.json"
 
-  development-externalnode:
+  bus:
     build:
       context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "test:external:node:live"]
+      dockerfile: docker/Dev.dockerfile
+    image: dnsmq-messagebus-development
     volumes:
-      - "./src:/app/src"
-      - "./tests:/app/tests"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
+      - "./.babelrc:/dnsmq-messagebus/.babelrc"
+      - "./src:/dnsmq-messagebus/src"
+      - "./lib:/dnsmq-messagebus/lib"
+      - "./tests-src:/dnsmq-messagebus/tests-src"
+      - "./tests:/dnsmq-messagebus/tests"
+      - "./package.json:/dnsmq-messagebus/package.json"
 
-  testlibrary:
-    build:
-      context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "test:library"]
+  unit-tests:
+    image: dnsmq-messagebus-development
     volumes:
-      - "./src:/app/src"
-      - "./tests:/app/tests"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
-
-  testexternalnode:
-    build:
-      context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "test:external:node"]
-    volumes:
-      - "./src:/app/src"
-      - "./tests:/app/tests"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
-
-  cluster:
-    build:
-      context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "start:cluster:node"]
-    volumes:
-      - "./src:/app/src"
-      - "./tests:/app/tests"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
-
-  distribution:
-    build:
-      context: .
-      dockerfile: tests/Dev.Dockerfile
-    command: ["npm", "run", "build"]
-    volumes:
-      - "./src:/app/src"
-      - "./lib:/app/lib"
-      - "./package.json:/app/package.json"
-      - "./.babelrc:/app/.babelrc"
+      - "./.babelrc:/dnsmq-messagebus/.babelrc"
+      - "./src:/dnsmq-messagebus/src"
+      - "./lib:/dnsmq-messagebus/lib"
+      - "./tests-src:/dnsmq-messagebus/tests-src"
+      - "./tests:/dnsmq-messagebus/tests"
+      - "./package.json:/dnsmq-messagebus/package.json"
