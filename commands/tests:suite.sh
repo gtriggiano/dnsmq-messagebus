@@ -21,12 +21,7 @@ echo
 runAsService development better-npm-run test:unit
 echo
 separator
-echo
-echo -n "Starting bus service..."
-startService bus &>/dev/null
-sleep 2
-echo "Done."
-echo
+startService bus
 separator
 echo
 echo "DNS NODE TESTS"
@@ -39,8 +34,4 @@ echo
 runAsService bus better-npm-run test:externalnode
 echo
 separator
-echo
-echo -n "Cleaning bus service..."
 cleanService bus
-echo "Done."
-echo

@@ -4,7 +4,7 @@ set -e
 
 source "${BASH_SOURCE%/*}/common.sh"
 
-cleanService unit-tests
+cleanService development
 
 CMD="better-npm-run test:unit"
 
@@ -12,6 +12,6 @@ if [[ "$1" == "live" ]]; then
   CMD="$CMD:live"
 fi
 
-runAsService unit-tests $CMD
+runAsService development $CMD
 
-cleanService unit-tests
+cleanService development
