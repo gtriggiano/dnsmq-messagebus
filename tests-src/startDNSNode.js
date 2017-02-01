@@ -1,9 +1,12 @@
 const codePath = `../${process.env.CODE_PATH}`
-const DNSHOST = process.env.DNSHOST
+const DNSHOST = 'bus'
 
 var Node = require(codePath).Node
 
 var node = Node(DNSHOST)
+
+node.on('ready', () => console.log('bus node connected'))
+node.on('not:ready', () => console.log('bus node disconnected'))
 
 node.activate()
 
