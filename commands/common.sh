@@ -32,6 +32,17 @@ function startService () {
   fi
 }
 
+function stopService () {
+  local SERVICE=$1
+  if [[ -n "$SERVICE" ]]; then
+    echo
+    echo -n "Stopping all '$SERVICE' containers... "
+    docker-compose -p dnsmq-messagebus stop $SERVICE &>/dev/null
+    echo 'Done.'
+    echo
+  fi
+}
+
 function scaleService () {
   local SERVICE=$1
   local NUM=$2
