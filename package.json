@@ -56,7 +56,8 @@
     "start:bus:node": {
       "command": "babel-node tests-src/startDNSNode.js",
       "env": {
-        "CODE_PATH": "src"
+        "CODE_PATH": "src",
+        "DEBUG": "dnsmq-messagebus:*,-dnsmq-messagebus:SUB:heartbeats,-dnsmq-messagebus:masterbroker:heartbeats,-dnsmq-messagebus:PUB"
       }
     },
     "start:bus:emitter": {
