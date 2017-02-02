@@ -1,5 +1,5 @@
 const codePath = `../${process.env.CODE_PATH}`
-const DNSHOST = 'bus'
+const DNSHOST = 'dnsmq-messagebus-development-bus.docker'
 
 var Node = require(codePath).Node
 
