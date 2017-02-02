@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: docker/Dev.dockerfile
     image: dnsmq-messagebus-development
-    command: ["better-npm-run", "start:bus:node"]
+    command: ["node", "tests/startDNSNode"]
     stdin_open: true
     tty: true
     volumes:
@@ -32,3 +32,6 @@ services:
       - "./tests-src:/dnsmq-messagebus/tests-src"
       - "./tests:/dnsmq-messagebus/tests"
       - "./package.json:/dnsmq-messagebus/package.json"
+    environment:
+      - CODE_PATH=lib
+      - DEBUG=dnsmq-messagebus:*,-dnsmq-messagebus:SUB:heartbeats,-dnsmq-messagebus:masterbroker:heartbeats,-dnsmq-messagebus:PUB
