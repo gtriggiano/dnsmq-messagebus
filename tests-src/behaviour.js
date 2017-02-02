@@ -12,7 +12,7 @@ function restartBusNode1 () {
       if (err) return reject(err)
       busNode1.start((err) => {
         if (err) return reject(err)
-        resolve()
+        setTimeout(() => resolve(), 1000)
       })
     })
   })
@@ -37,6 +37,44 @@ describe(`Connectivity of ${EXTERNAL ? 'an ExternalNode' : 'a DNSNode'}`, () => 
     })
     node.activate()
   })
+  if (!EXTERNAL) {
+    it('if master tries to elect a new master before deactivation, to ensure other nodes connectivity', function (done) {
+      this.timeout(10000)
+
+      let busNode = Node()
+
+      let emitter = _Node(DNSHOST, {external: true})
+      const publishOnA = () => emitter.publish('a', 'message')
+      const publishOnB = () => emitter.publish('b', 'message')
+
+      let receiver = _Node(DNSHOST, {external: true})
+      receiver.subscribe(['a', 'b'])
+      receiver.once('a', () => {
+        should(emitter.master.name).equal(busNode.name)
+        busNode.deactivate()
+        busNode.on('deactivated', () => {
+          publishOnB()
+        })
+      })
+      receiver.once('b', () => {
+        emitter.deactivate()
+        receiver.deactivate()
+        done()
+      })
+
+      receiver.once('ready', () => emitter.activate())
+      emitter.once('ready', () => publishOnA())
+
+      busNode.activate()
+      busNode.once('ready', () => {
+        restartBusNode1()
+        .then(() => {
+          receiver.activate()
+        })
+        .catch(done)
+      })
+    })
+  }
 })
 describe(`Properties of ${EXTERNAL ? 'an ExternalNode' : 'a DNSNode'} connectivity state`, () => {
   it('node.canPublish is true/false depending on the state of the publishing connection to master', (done) => {
