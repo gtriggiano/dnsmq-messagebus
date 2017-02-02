@@ -16,6 +16,10 @@ source "${BASH_SOURCE%/*}/transpile.sh" &> /dev/null
 echo "Done."
 cleanContainers
 echo
+separator
+startService dnsdock
+sleep 3
+separator
 echo "UNIT TESTS"
 echo
 runAsService development better-npm-run test:unit

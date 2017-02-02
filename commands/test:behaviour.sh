@@ -9,6 +9,11 @@ cleanService development &>/dev/null
 cleanService bus &>/dev/null
 echo "Done."
 
+startService dnsdock
+echo -n "Waiting DNS setup... "
+sleep 3
+echo "Done."
+
 startService bus
 echo -n "Waiting bus setup... "
 sleep 3
@@ -30,6 +35,7 @@ if [[ "$1" != "live" ]]; then
   echo
 else
   echo "TEST DNS NODE BEHAVIOUR LIVE"
+  echo
   CMD="$CMD:live"
   runAsService bus $CMD
 fi
