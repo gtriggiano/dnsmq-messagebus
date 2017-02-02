@@ -16,7 +16,6 @@ source "${BASH_SOURCE%/*}/transpile.sh" &> /dev/null
 echo "Done."
 cleanContainers
 echo
-echo
 echo "UNIT TESTS"
 echo
 runAsService development better-npm-run test:unit
@@ -26,13 +25,14 @@ startService bus
 separator
 echo
 echo "DNS NODE BEHAVIOUR TESTS"
-runAsService bus better-npm-run test:dnsnode:behaviour
+echo
+runAsService bus "better-npm-run test:behaviour"
 echo
 separator
 echo
-echo "EXTERNAL NODE BEHAVIOUR NODE TESTS"
+echo "EXTERNAL NODE BEHAVIOUR TESTS"
 echo
-runAsService bus better-npm-run test:externalnode:behaviour
+runAsService development "better-npm-run test:behaviour"
 echo
 separator
 echo
