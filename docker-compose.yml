@@ -2,6 +2,14 @@ version: '2'
 
 services:
 
+  dnsdock:
+    image: aacebedo/dnsdock:latest-amd64
+    networks:
+      default:
+        ipv4_address: 172.24.0.100
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
   development:
     build:
       context: .
@@ -9,6 +17,7 @@ services:
     image: dnsmq-messagebus-development
     stdin_open: true
     tty: true
+    dns: 172.24.0.100
     volumes:
       - "./.babelrc:/dnsmq-messagebus/.babelrc"
       - "./src:/dnsmq-messagebus/src"
@@ -16,15 +25,19 @@ services:
       - "./tests-src:/dnsmq-messagebus/tests-src"
       - "./tests:/dnsmq-messagebus/tests"
       - "./package.json:/dnsmq-messagebus/package.json"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      - EXTERNAL=true
 
   bus:
     build:
       context: .
       dockerfile: docker/Dev.dockerfile
-    image: dnsmq-messagebus-development
+    image: dnsmq-messagebus-development-bus
     command: ["node", "tests/startDNSNode"]
     stdin_open: true
     tty: true
+    dns: 172.24.0.100
     volumes:
       - "./.babelrc:/dnsmq-messagebus/.babelrc"
       - "./src:/dnsmq-messagebus/src"
@@ -32,6 +45,7 @@ services:
       - "./tests-src:/dnsmq-messagebus/tests-src"
       - "./tests:/dnsmq-messagebus/tests"
       - "./package.json:/dnsmq-messagebus/package.json"
+      - "/var/run/docker.sock:/var/run/docker.sock"
     environment:
       - CODE_PATH=lib
       - DEBUG=dnsmq-messagebus:*,-dnsmq-messagebus:SUB:heartbeats,-dnsmq-messagebus:masterbroker:heartbeats,-dnsmq-messagebus:PUB
