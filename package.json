@@ -6,11 +6,9 @@
   "scripts": {
     "test": "./commands/tests:suite.sh",
     "test:unit": "./commands/test:unit.sh",
-    "test:dnsnode": "./commands/test:dnsnode.sh",
-    "test:externalnode": "./commands/test:externalnode.sh",
+    "test:behaviour": "./commands/test:behaviour.sh",
     "dev:test:unit": "./commands/test:unit.sh live",
     "dev:test:behaviour": "./commands/test:behaviour.sh live",
-    "dev:test:externalnode": "./commands/test:externalnode.sh live",
     "transpile": "./commands/transpile.sh",
     "prepublish": "npm test"
   },
@@ -27,37 +25,18 @@
         "CODE_PATH": "src"
       }
     },
-    "test:dnsnode:behaviour": {
-      "command": "mocha tests/behaviour",
-      "env": {
-        "CODE_PATH": "lib"
-      }
-    },
-    "test:dnsnode:behaviour:live": {
-      "command": "mocha --compilers js:babel-register -b -w tests-src/behaviour",
-      "env": {
-        "CODE_PATH": "src"
-      }
-    },
-    "test:externalnode:behaviour": {
+    "test:behaviour": {
       "command": "mocha tests/behaviour",
       "env": {
         "CODE_PATH": "lib",
-        "EXTERNAL": true
+        "DEBUG": "-*"
       }
     },
-    "test:externalnode:behaviour:live": {
+    "test:behaviour:live": {
       "command": "mocha --compilers js:babel-register -b -w tests-src/behaviour",
       "env": {
         "CODE_PATH": "src",
-        "EXTERNAL": true
-      }
-    },
-    "start:bus:node": {
-      "command": "babel-node tests-src/startDNSNode.js",
-      "env": {
-        "CODE_PATH": "src",
-        "DEBUG": "dnsmq-messagebus:*,-dnsmq-messagebus:SUB:heartbeats,-dnsmq-messagebus:masterbroker:heartbeats,-dnsmq-messagebus:PUB"
+        "DEBUG": "-*"
       }
     },
     "start:bus:emitter": {
