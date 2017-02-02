@@ -41,7 +41,7 @@ function MasterFinder (node) {
           _findingMaster = false
           return reject(err)
         }
-        debug(`resolved IP(s) for host '${host}' in ${Date.now() - resolveStart} ms`)
+        debug(`resolved ${addresses.length} IP(s) for host '${host}' in ${Date.now() - resolveStart} ms`)
 
         let _resolved = false
 

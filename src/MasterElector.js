@@ -113,7 +113,7 @@ function MasterElector (node, masterBroker) {
           debug(`cannot resolve host '${host}'. Check DNS infrastructure.`)
           return reject(err)
         }
-        debug(`resolved IP(s) for host '${host}' in ${Date.now() - resolveStart} ms`)
+        debug(`resolved ${addresses.length} IP(s) for host '${host}' in ${Date.now() - resolveStart} ms`)
         debug(`requesting votes from ${addresses.length} nodes`)
         Promise.all(
           addresses.map(address => new Promise((resolve, reject) => {
