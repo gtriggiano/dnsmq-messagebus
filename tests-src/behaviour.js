@@ -1,6 +1,22 @@
 const codePath = `../${process.env.CODE_PATH}`
-const DNSHOST = 'bus'
+const DNSHOST = 'dnsmq-messagebus-development-bus.docker'
 const EXTERNAL = !!process.env.EXTERNAL
+
+import Docker from 'dockerode'
+const docker = new Docker({socketPath: '/var/run/docker.sock'})
+
+const busNode1 = docker.getContainer('dnsmqmessagebus_bus_1')
+function restartBusNode1 () {
+  return new Promise((resolve, reject) => {
+    busNode1.stop((err) => {
+      if (err) return reject(err)
+      busNode1.start((err) => {
+        if (err) return reject(err)
+        resolve()
+      })
+    })
+  })
+}
 
 import should from 'should/as-function'
 
@@ -104,6 +120,31 @@ describe(`Properties of ${EXTERNAL ? 'an ExternalNode' : 'a DNSNode'} connectivi
     node.on('deactivated', () => done())
     node.activate()
   })
+  it('node.isMaster is a boolean', () => {
+    let node = Node()
+    should(node.isMaster).be.a.Boolean()
+  })
+  if (!EXTERNAL) {
+    it('node.isMaster is true when the node has been elected master', function (done) {
+      this.timeout(10000)
+
+      let node = Node()
+      should(node.isMaster).be.False()
+      node.activate()
+      node.once('ready', () => {
+        restartBusNode1()
+        .then(() => {
+          should(node.isMaster).be.True()
+          node.deactivate()
+        })
+        .catch(done)
+      })
+      node.once('deactivated', () => {
+        should(node.isMaster).be.False()
+        done()
+      })
+    })
+  }
 })
 describe(`As an EventEmitter ${EXTERNAL ? 'an ExternalNode' : 'a DNSNode'}`, () => {
   it('emits a `ready` event when the node connects to the master', (done) => {
