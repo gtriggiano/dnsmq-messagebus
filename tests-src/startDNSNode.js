@@ -14,6 +14,7 @@ process.on('SIGTERM', shutDown)
 process.on('SIGINT', shutDown)
 
 function shutDown () {
+  console.log('received kill signal')
   node.on('deactivated', () => process.exit(0))
   node.deactivate()
 }
